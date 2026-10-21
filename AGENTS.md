@@ -44,16 +44,16 @@ Ref. [`ia/decisions/DEC-0010-idioma-castellano.md`](ia/decisions/DEC-0010-idioma
 | Autoprueba del navegador | `node ia/qa/selftest-cdp.mjs` |
 | Motores de QA disponibles | `node -e "import('./ia/qa/driver.mjs').then(m => m.listEngines().then(console.table))"` |
 | Instalar el stack | `sudo bash ops/10-guacd.sh` … `ops/60-conexion-rdp.sh`, uno por etapa (definidos en F-001; sin ejecutar todavía) |
-| Levantar en dev | No aplica: el producto es el host. Recargar: `sudo systemctl restart guacd tomcat9` · `sudo nginx -t && sudo systemctl reload nginx` (la unidad de Tomcat la confirma T01) |
+| Levantar en dev | No aplica: el producto es el host. Recargar: `sudo systemctl restart guacd guacamole-tomcat` · `sudo apache2ctl configtest && sudo systemctl reload apache2` |
 | Build | No aplica: sin código propio compilado. `guacd` se compila en el host desde la release 1.6.0 |
 
 ## Proyecto
 
-Aries_Access da acceso a las **VMs Windows de VMware desde el navegador** con Apache Guacamole: un solo punto de entrada, sin instalar agentes (AnyDesk/RustDesk) en los guests. Uso personal/interno de AriesDev. El despliegue es **nativo, sin Docker**: `guacd` + Tomcat 9 + PostgreSQL en `server01`, TLS por el **nginx del host**, y RDP como protocolo de acceso previsto. Feature en curso: **F-001** (spec pendiente de aprobación).
+Aries_Access da acceso a las **VMs Windows de VMware desde el navegador** con Apache Guacamole: un solo punto de entrada, sin instalar agentes (AnyDesk/RustDesk) en los guests. Uso personal/interno de AriesDev. El despliegue es **nativo, sin Docker**: `guacd` + Tomcat 9 + PostgreSQL en `server01`, TLS por el **Apache del host**, y RDP como protocolo de acceso. Feature en curso: **F-001** (spec aprobada, en ejecución).
 
 | Componente | Ruta | Stack |
 |---|---|---|
-| Host Guacamole | fuera del repo: `server01` (`192.168.18.70`) | Ubuntu 24.04 + guacd + Tomcat 9 + PostgreSQL 16 + nginx |
+| Host Guacamole | fuera del repo: `server01` (`192.168.18.70`) | Ubuntu 24.04 + guacd + Tomcat 9 + PostgreSQL 16 + Apache 2.4 |
 | Aprovisionamiento | `ops/` | Bash idempotente (ASCII, LF) |
 | Pruebas smoke | `tests/` | Node/Bash, lanzadas por `run-tests.mjs` |
 | Panel de acceso propio (pendiente, F-002) | `public/` | HTML/CSS/JS estático |

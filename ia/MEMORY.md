@@ -13,7 +13,7 @@ Aries_Access da acceso a las **VMs Windows de VMware desde el navegador** con Ap
 Nada está implementado todavía (adopción 2026-10-21). El flujo **previsto** es:
 
 ```
-navegador ──HTTPS──> nginx del host (server01) ──> Tomcat (webapp Guacamole) ──guacd──> RDP del guest
+navegador ──HTTPS──> Apache del host (server01) ──> Tomcat (webapp Guacamole) ──guacd──> RDP del guest
 ```
 
 Y el despliegue **no vive solo**: `server01` ya sirve Supabase, n8n y Chatwoot.
@@ -51,7 +51,7 @@ Técnicos, en inglés; la frase que los contiene, en castellano ([DEC-0010](./de
 - **Nada sin spec aprobada.** Regla suprema del harness.
 - **Sin secretos en el repo:** contraseñas de PostgreSQL, de `guacadmin` y de los guests no se versionan.
 - **`guacd` no se publica**: escucha solo en la red interna o en localhost, nunca expuesto.
-- **`expose` de nginx/Tomcat:** Guacamole detrás de un reverse proxy exige `proxy_buffering off` (o el canvas se congela) y pasar los encabezados `Upgrade`/`Connection` para el WebSocket.
+- **`expose` de Apache/Tomcat:** Guacamole detrás de un reverse proxy exige **reenviar el WebSocket** (en Apache: `mod_proxy_wstunnel` más una `RewriteRule` con `%{HTTP:Upgrade} =websocket`) y `ProxyPreserveHost On`. Sin eso el canvas se congela. `proxy_buffering off` es de nginx y aquí **no aplica**.
 
 ## Trampas conocidas
 
@@ -79,7 +79,7 @@ Los de este repositorio. Los del stack (`ops/10-guacd.sh` … `ops/60-conexion-r
 
 ## Integraciones y dependencias externas
 
-- **Apache Guacamole 1.6.0** (`guacd` + webapp) · **Tomcat 9** · **PostgreSQL 16** · el **nginx del host** para TLS. Todavía ninguna instalada.
+- **Apache Guacamole 1.6.0** (`guacd` + webapp) · **Tomcat 9** (tarball) · **PostgreSQL 16** · el **Apache 2.4 del host** para TLS. Todavía ninguna instalada.
 - **VMware** con las VMs Windows: el host de Guacamole solo necesita alcanzar la IP del guest; el hipervisor no se integra.
 - **Hipervisor:** **ESXi/vCenter**. Las VMs son Pro/Enterprise/Server (RDP nativo) y la consola de rescate es la Web Console HTML5 del ESXi ([DEC-0026](./decisions/DEC-0026-arquitectura-despliegue-server01.md)).
 - **Host:** `server01` (`192.168.18.70`), Ubuntu 24.04.4 LTS — compartido con Supabase, n8n, Chatwoot y Evolution API.

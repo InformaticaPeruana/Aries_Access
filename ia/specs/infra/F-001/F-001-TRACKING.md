@@ -11,13 +11,13 @@ Bitácora de ejecución. **Único lugar donde vive el estado de las tareas**, ju
 
 | Tarea | Objetivo | Depende de | Estado | Evidencia |
 |-------|----------|------------|--------|-----------|
-| [T01](../../../plans/F-001/T01-verificacion-previa.md) | Verificación previa de `server01` (solo lectura) | - | partial | 2026-10-21: informe abajo. Falta la lista de IPs de las VMs y la prueba del 3389; `ss -ltnp` y `apache2ctl -S` necesitan sudo con contraseña |
-| [T02](../../../plans/F-001/T02-liberar-disco.md) | Liberar disco (gate) | T01 | pending | — |
+| [T01](../../../plans/F-001/T01-verificacion-previa.md) | Verificación previa de `server01` (solo lectura) | - | done | 2026-10-21: informe abajo (SO, disco 46 GB, puertos, Apache, ausencias, RDP a `192.168.18.41`) |
+| [T02](../../../plans/F-001/T02-liberar-disco.md) | Liberar disco (gate) — **no aplica** | T01 | done | 2026-10-21: 46 GB libres medidos en T01; **no se borró nada** |
 | [T03](../../../plans/F-001/T03-guacd.md) | `guacd` 1.6.0 como servicio | T02 | pending | — |
 | [T04](../../../plans/F-001/T04-postgresql.md) | PostgreSQL, esquema y usuario de base | T02 | pending | — |
 | [T05](../../../plans/F-001/T05-tomcat-webapp.md) | Tomcat 9, webapp y extensiones en `127.0.0.1:8081` | T03, T04 | pending | — |
 | [T06](../../../plans/F-001/T06-cuentas-totp.md) | Cuentas endurecidas, TOTP y límite de intentos | T05 | pending | — |
-| [T07](../../../plans/F-001/T07-nginx-tls.md) | vhost de nginx y TLS público | T06 | pending | — |
+| [T07](../../../plans/F-001/T07-apache-tls.md) | vhost de Apache y TLS público | T06 | pending | — |
 | [T08](../../../plans/F-001/T08-conexion-rdp.md) | Conexión RDP a la VM Windows | T07 | pending | — |
 | [T09](../../../plans/F-001/T09-smoke-test.md) | Suite smoke, `tests.commands` y reinicio | T07 | pending | — |
 
@@ -75,10 +75,21 @@ Salida real, sin editar. **Solo lectura**; ningún comando de escritura.
 3. **`tomcat9` no está en los repositorios de noble.** Se instala del **tarball oficial de Apache** y la unidad de systemd la creamos nosotros: desaparece la incógnita del "nombre real de la unidad".
 4. **`sudo` con contraseña:** T03–T08 no pueden ejecutarse solas. Hace falta una vía (NOPASSWD acotado o que el usuario corra los scripts).
 
+### VM Windows de destino (medida)
+
+| Dato | Valor |
+|---|---|
+| Nombre | `DESKTOP-8T09V6F` |
+| SO | **Windows 10 Pro** (build 19041, VMware7,1) |
+| IP | **`192.168.18.41/24`**, gw `192.168.18.1`, origen **Manual** (estática) |
+| RDP | `fDenyTSConnections=0` (habilitado) · **NLA activo** · `SecurityLayer=2` · puerto 3389 |
+| Alcance desde `server01` | **`192.168.18.41 3389 OK`** (TCP abierto; el ping ICMP no responde, es lo normal) |
+| Cuentas locales | `usuario` (habilitada) |
+
 ### Lo que falta de T01
 
-- **IPs de las VMs Windows** y prueba de alcance al 3389 desde `server01` (el usuario no las dio todavía).
-- `ss -ltnp` y `apache2ctl -S` completos (requieren sudo con contraseña).
+- `ss -ltnp` con nombres de proceso y `apache2ctl -S` completos: requieren `sudo` sin contraseña (pendiente de la entrada NOPASSWD).
+- El **usuario y la contraseña** del guest para la conexión de T08: no son un dato de T01, se cargan en Guacamole.
 
 ## Notas de ejecución
 

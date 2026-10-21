@@ -8,7 +8,7 @@ Estado arquitectónico **actual**. Se actualiza solo cuando cambia la arquitectu
 
 | Componente | Responsabilidad | Depende de |
 |---|---|---|
-| nginx del host | Termina TLS, publica `https://<dominio>/guacamole/` y pasa el WebSocket a la webapp. Ya existe y sirve otros sitios | certificado válido |
+| Apache 2.4 del host | Termina TLS, publica `https://<dominio>/guacamole/` y reenvía el WebSocket a la webapp. Ya existe y sirve otros sitios | certificado válido |
 | Tomcat + webapp Guacamole | Cliente HTML5: dibuja la sesión en `<canvas>` y la transporta por WebSocket. Escucha en `127.0.0.1:8081` | `guacd`, PostgreSQL, JDK |
 | `guacd` | Proxy de protocolos: habla RDP con el guest. Escucha solo en loopback (4822) | la VM Windows encendida y con red |
 | PostgreSQL 16 | Usuarios, conexiones, permisos y parámetros. Escucha en `127.0.0.1:5434` | — |
@@ -17,13 +17,13 @@ Estado arquitectónico **actual**. Se actualiza solo cuando cambia la arquitectu
 ## Flujos principales
 
 **Entrar a una VM (el flujo que importa).**
-1. El navegador pide `https://<dominio>/guacamole/` y nginx termina el TLS.
+1. El navegador pide `https://<dominio>/guacamole/` y Apache termina el TLS.
 2. Login con usuario propio y **TOTP**; Guacamole valida contra PostgreSQL.
 3. El usuario elige la conexión; la webapp abre un WebSocket.
 4. La webapp pide a `guacd` una sesión RDP contra la IP del guest, con NLA.
 5. El guest entra con el usuario y la contraseña guardados en la conexión (cifrados con la clave de la base). **Punto irreversible:** cambiar esa clave deja ilegibles las credenciales guardadas.
 
-**Aprovisionar el host.** `ops/10` → `ops/60`, en orden, cada uno idempotente. `ops/40` (nginx) es el **punto irreversible**: recargar nginx con un vhost mal escrito tumba todos los sitios del host. Se valida con `nginx -t` antes de recargar.
+**Aprovisionar el host.** `ops/10` → `ops/60`, en orden, cada uno idempotente. `ops/50` (Apache) es el **punto irreversible**: recargar Apache con un vhost mal escrito tumba todos los sitios del host. Se valida con `apache2ctl configtest` antes de recargar.
 
 ## Persistencia
 
@@ -48,7 +48,7 @@ Una sola base: `guacamole_db` en el PostgreSQL del host (`127.0.0.1:5434`), con 
 | Decisión | Tema |
 |---|---|
 | [DEC-0025](./decisions/DEC-0025-despliegue-nativo-sin-docker.md) | Despliegue nativo, sin Docker |
-| [DEC-0026](./decisions/DEC-0026-arquitectura-despliegue-server01.md) | Host, nginx como reverse proxy, puertos 8081/5434 y RDP |
+| [DEC-0026](./decisions/DEC-0026-arquitectura-despliegue-server01.md) | Host, **Apache** como reverse proxy, puertos 8081/5434 y RDP |
 
 ## Deuda arquitectónica
 

@@ -4,48 +4,51 @@
 
 ## Objective
 
-Acceso a las VMs Windows de VMware desde el navegador con Apache Guacamole: un solo punto de entrada, sin agentes en los guests. Fase actual: F-001 especificada, esperando aprobación para ejecutar.
+Acceso a las VMs Windows de VMware desde el navegador con Apache Guacamole: un solo punto de entrada, sin agentes en los guests. Fase actual: F-001 en ejecución.
 
 ## Current Task
 
-F-001 · T01 — verificación previa de `server01`, **solo lectura**. `blocked` por acceso SSH.
+F-001 · **T03** — `guacd` 1.6.0 como servicio. Bloqueada por `sudo` con contraseña.
 
 ## Status
 
-`in_progress` (spec **aprobada** el 2026-10-21). T01 bloqueada: falta la clave SSH.
+`in_progress` — T01 `done` (host medido), T02 `done` por *no aplica* (46 GB libres). T03–T09 pendientes.
 
 ## Last Completed
 
-Spec, plan y órdenes de trabajo (T01–T09) de F-001, con [DEC-0026](./decisions/DEC-0026-arquitectura-despliegue-server01.md) y la revisión adversarial en tres rondas (`APROBADO_CON_OBSERVACIONES`).
+T01 (2026-10-21): Ubuntu 24.04.4, **46 GB libres**, **Apache 2.4.58** en el 80 (no nginx), `443`/`8081`/`5434`/`4822` libres, sin PostgreSQL/Tomcat/Java/guacd. VM destino: **`DESKTOP-8T09V6F`** (Windows 10 Pro, `192.168.18.41`) con RDP+NLA y **3389 alcanzable desde `server01`**.
 
 ## Next
 
-Desbloquear T01 (clave pública en `~humberto/.ssh/authorized_keys` de `server01` o pegar la salida de su bloque de validación) y ejecutarla: puertos libres, disco y RAM reales, estado de nginx, clústeres de PostgreSQL y **alcance RDP a las VMs del ESXi**.
+1. Entrada **NOPASSWD** acotada en `/etc/sudoers.d/aries-access` (la crea el usuario).
+2. T03: compilar `guacd` 1.6.0 con RDP, unidad propia, `bind-host=127.0.0.1`.
+3. T04: clúster PostgreSQL en el **5434** + esquema.
 
 ## Blockers
 
-- **Acceso SSH a `server01`:** el 22 responde pero rechaza `publickey,password` en modo no interactivo y no hay clave en esta máquina. Dueño: usuario. Ver §Desbloqueo de [`plans/F-001/T01-verificacion-previa.md`](./plans/F-001/T01-verificacion-previa.md).
-- **Datos por cerrar:** ítems 2, 6, 8 y 9 de [`CHECKLIST.md`](./CHECKLIST.md) — lista de VMs, sesiones concurrentes, dominio/DNS/certificado y preparación del guest.
+- **`sudo` pide contraseña** en `server01`: sin NOPASSWD, T03–T08 no se pueden ejecutar. Dueño: usuario.
+- **Dominio, DNS y certificado** (ítem 8 de [`CHECKLIST.md`](./CHECKLIST.md)): bloquean T07, no lo anterior.
+- **Credenciales del guest** (`usuario` de Windows): se necesitan en T08 y se cargan en Guacamole, no en el repo.
 
 ## Active Spec
 
-[`specs/infra/F-001/F-001.spec.md`](./specs/infra/F-001/F-001.spec.md) — F-001, riesgo alto, `pending`
+[`specs/infra/F-001/F-001.spec.md`](./specs/infra/F-001/F-001.spec.md) — F-001, riesgo alto, `in_progress`
 
 ## Active Plan
 
-[`plans/F-001/PLAN.md`](./plans/F-001/PLAN.md) — T01–T09
+[`plans/F-001/PLAN.md`](./plans/F-001/PLAN.md) — T01 y T02 cerradas; T03–T09 pendientes
 
 ## Entorno
 
-- Host: `server01` (`192.168.18.70`), compartido con Supabase, n8n, Chatwoot y Evolution API. Nada de Guacamole instalado aún.
+- Host: `server01` (`192.168.18.70`), Ubuntu 24.04.4, 1 vCPU, 4.6 GiB disponibles. Convive con Supabase, n8n, Chatwoot y Evolution API (Docker).
 - Harness: `node ia/tools/check-harness.mjs --report` · pruebas: `node ia/tools/run-tests.mjs` (sin comandos declarados: los añade T09).
 
 ## Al retomar
 
-- El despliegue es **nativo** y va en `server01` ([DEC-0025](./decisions/DEC-0025-despliegue-nativo-sin-docker.md), [DEC-0026](./decisions/DEC-0026-arquitectura-despliegue-server01.md)): TLS por el nginx del host, webapp en `127.0.0.1:8081`, base en `127.0.0.1:5434`.
-- **No se para, reinicia ni reconfigura ningún servicio existente del host.** Un vhost mal escrito en nginx tumba todos los sitios.
-- **Dos gates pendientes**: borrar respaldos para liberar disco (T02) y reiniciar el host (AC12). Ninguno se ejecuta sin confirmación explícita.
-- `codeRoots` pasa a incluir `ops/` y `tests/`.
+- **El proxy es Apache, no nginx** ([DEC-0026](./decisions/DEC-0026-arquitectura-despliegue-server01.md) §Enmienda). nginx no está instalado.
+- **Tomcat 9 va del tarball** en `/opt/tomcat9` con unidad `guacamole-tomcat` (no hay `tomcat9` en apt).
+- **No se para, reinicia ni reconfigura ningún servicio existente del host.** Un vhost mal escrito en Apache tumba todos los sitios.
+- **Un solo gate pendiente**: reiniciar `server01` (AC12). El de borrar respaldos se canceló.
 
 ## Relacionados
 

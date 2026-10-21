@@ -13,13 +13,13 @@ Registro de los datos que hay que conseguir de **fuentes externas** (cliente, pr
 - **Cerrado:** 2026-10-21 — en `PROJECT.md` §Componentes y en [`DEC-0026`](./decisions/DEC-0026-arquitectura-despliegue-server01.md).
 - **Bloquea:** F-001
 
-### 2. Edición de los Windows y número de VMs
+### 2. Edición de los Windows y número de VMs ✅
 - [x] Son **Pro/Enterprise/Server**: RDP nativo en todas, sin VNC.
-- [ ] Cuántas VMs hay que publicar y con qué nombre.
+- [x] Primera VM identificada y medida en T01: **`DESKTOP-8T09V6F`**, Windows 10 **Pro**, `192.168.18.41` (IP manual), RDP con NLA.
 - **Dueño:** usuario
 - **Condición de cierre:** la lista de VMs con su edición está en la spec de F-001.
-- **Estado:** abierto por la lista. F-001 arranca con **una** conexión (R7) y cada VM se agrega sin escribir código nuevo: no bloquea la spec.
-- **Bloquea:** T08 (agregar más de una VM)
+- **Cerrado:** 2026-10-21 — R7 nombra la primera VM. Agregar más es crear otra conexión en Guacamole, sin código nuevo.
+- **Bloquea:** nada.
 
 ### 3. Red de las VMs y host de Guacamole ✅
 - [x] Host definitivo: **`server01`** (`192.168.18.70`), Ubuntu 24.04.4 LTS, VM de VMware. `PROJECT.md` y [`DEC-0026`](./decisions/DEC-0026-arquitectura-despliegue-server01.md).
@@ -51,11 +51,12 @@ Registro de los datos que hay que conseguir de **fuentes externas** (cliente, pr
 - **Bloquea:** T06 (crear usuarios). No bloquea T01–T05.
 
 ### 7. IP estable para el host y para los guests
+- [x] **Guest:** `192.168.18.41` es **manual** (estática), no DHCP. Verificado en T01.
 - [ ] Reserva de **DHCP** para `server01`: hoy tiene IP dinámica y de ella dependen el vhost y el certificado.
-- [ ] IP fija o reserva para cada VM Windows: la conexión RDP apunta a una IP, y si cambia, se rompe sola.
 - **Dueño:** usuario
-- **Condición de cierre:** reservas hechas en el DHCP del router y anotadas en la spec de F-001.
-- **Bloquea:** AC6 (vhost y certificado) y T08 de forma diferida (funciona hoy; se rompe sin aviso el día que cambie la IP).
+- **Condición de cierre:** reserva hecha en el DHCP del router y anotada en la spec de F-001.
+- **Estado:** el guest está resuelto; falta el host.
+- **Bloquea:** AC6 (vhost y certificado) de forma diferida (funciona hoy; se rompe sin aviso el día que cambie la IP).
 
 ### 8. Dominio, DNS y certificado
 - [ ] Cuál es el **dominio** público y quién controla su zona DNS.
@@ -66,13 +67,14 @@ Registro de los datos que hay que conseguir de **fuentes externas** (cliente, pr
 - **Condición de cierre:** dominio, zona DNS y método anotados en la spec de F-001.
 - **Bloquea:** T07. **No bloquea** la spec.
 
-### 9. Preparación del guest Windows
-- [ ] RDP habilitado en cada VM (`fDenyTSConnections=0`).
-- [ ] Firewall del guest con el 3389 **acotado a la IP de `server01`**, no abierto a toda la LAN.
-- [ ] IP fija o reserva por VM.
+### 9. Preparación del guest Windows ✅
+- [x] RDP habilitado (`fDenyTSConnections=0`) y **NLA activo** (`UserAuthentication=1`, `SecurityLayer=2`).
+- [x] El 3389 **responde a `server01`**: `192.168.18.41 3389 OK` (medido en T01). El firewall ya lo permite; no se abrió a toda la LAN, se dejó como estaba.
+- [x] IP fija en el guest (`192.168.18.41`, origen Manual).
 - **Dueño:** usuario
 - **Condición de cierre:** las tres cosas hechas en la VM y anotadas en la spec de F-001.
-- **Bloquea:** T08.
+- **Cerrado:** 2026-10-21 con la medición de T01. **Queda un dato para T08:** el usuario y la contraseña de la cuenta de Windows (`usuario`), que se cargan en Guacamole y no se versionan.
+- **Bloquea:** nada.
 
 ## Cierre de un ítem
 
@@ -85,6 +87,7 @@ Registro de los datos que hay que conseguir de **fuentes externas** (cliente, pr
 
 - **2026-10-21** — ítems **1, 3, 4 y 5** cerrados al escribir la spec de F-001 ([`DEC-0026`](./decisions/DEC-0026-arquitectura-despliegue-server01.md)). Ítem **2** cerrado a medias: falta la lista de VMs.
 - **2026-10-21** — añadidos los ítems **8** (dominio, DNS y certificado) y **9** (preparación del guest) a raíz de la revisión adversarial de la spec: eran trabajo del usuario que el plan daba por hecho sin dueño.
+- **2026-10-21 (T01)** — cerrados los ítems **2** (la VM es `DESKTOP-8T09V6F`, Windows 10 Pro, `192.168.18.41`) y **9** (RDP con NLA y 3389 alcanzable desde `server01`). El **7** queda a medias: el guest ya tiene IP estática, falta la reserva de DHCP del host. Abierto el **8**: sin dominio no hay vhost ni certificado.
 
 ## Relacionados
 

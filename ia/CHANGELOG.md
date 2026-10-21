@@ -62,6 +62,25 @@ Files:
 * `ia/specs/infra/F-001/`, `ia/plans/F-001/`, `ia/decisions/DEC-0024-*`, `DEC-0025-*`, `DEC-0026-*`, `ia/PROJECT.md`, `ia/ARCHITECTURE.md`, `ia/CURRENT.md`, `ia/MEMORY.md`, `ia/CHECKLIST.md`, `ia/GATES.md`, `ia/BACKLOG.md`, `ia/specs/README.md`, `ia/tools/harness.config.json`, `AGENTS.md`, `.gitignore`, `.gitattributes`
 Spec: F-001
 
+## 2026-10-21 22:10
+
+Task: T01 ejecutada (solo lectura) y T02 cerrada como *no aplica*: el host medido corrige cuatro supuestos del plan.
+Changed:
+* **Medido en `server01`**: Ubuntu 24.04.4, **46 GB libres** (no 99%), **Apache 2.4.58** sirviendo el 80 (nginx inexistente), `443`/`8081`/`5434`/`4822` libres, sin PostgreSQL/Tomcat/Java/guacd, `sudo` con contraseña, IP por DHCP.
+* **VM destino**: `DESKTOP-8T09V6F` (Windows 10 Pro, `192.168.18.41`, IP manual) con RDP+NLA y **3389 alcanzable desde `server01`**.
+* [DEC-0026](decisions/DEC-0026-arquitectura-despliegue-server01.md): §Enmienda tras T01 — Apache en vez de nginx, Tomcat 9 del tarball, sin gate de disco, datos medidos.
+* Spec: R4 pasa a Apache, R7 fija la VM, se corrigen contexto y restricciones.
+* Plan: T02 marcada *no aplica*, riesgos reescritos (sin disco, con Apache y con `sudo`).
+* `T07-nginx-tls.md` → `T07-apache-tls.md`; T05 documenta el tarball y la unidad `guacamole-tomcat`.
+* `CHECKLIST.md`: ítems **2** y **9** cerrados; el **7** a medias (falta la reserva DHCP del host).
+Validated:
+* PASS — `node ia/tools/check-harness.mjs --report`: 0 FAIL, 0 warn.
+* PASS — T01: `df`, `free`, `ss -ltn`, `apache2ctl -v`, `pg_lsclusters`, `apt-cache policy`, `systemctl list-units` y prueba TCP al 3389.
+* NOT_AVAILABLE — `ss -ltnp` y `apache2ctl -S` completos: requieren `sudo` sin contraseña.
+Files:
+* `ia/specs/infra/F-001/`, `ia/plans/F-001/`, `ia/decisions/DEC-0026-*`, `ia/CURRENT.md`, `ia/CHECKLIST.md`, `ia/GATES.md`, `ia/PROJECT.md`, `ia/ARCHITECTURE.md`, `ia/MEMORY.md`, `AGENTS.md`
+Spec: F-001
+
 ## Relacionados
 
 - Estado actual: [`CURRENT.md`](./CURRENT.md) · Mapa: [`README.md`](./README.md)
