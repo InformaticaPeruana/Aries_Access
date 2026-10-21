@@ -1,0 +1,13 @@
+{
+  "updatedAt": "2026-10-21",
+  "note": "Ratchet del harness: los presupuestos no pueden empeorar. Ver DEC-0008.",
+  "entryFileLines": {
+    "AGENTS.md": 75,
+    "ia/INSTRUCTIONS.md": 78,
+    "ia/CURRENT.md": 52,
+    "ia/MEMORY.md": 88,
+    "ia/specs/README.md": 41
+  },
+  "codeFilesTotal": null,
+  "codeTaggedFiles": null
+}

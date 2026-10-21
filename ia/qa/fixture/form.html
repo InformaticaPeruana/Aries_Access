@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fixture - alta de producto</title>
+<style>
+  :root { --err: #b42318; --ok: #027a48; }
+  body { font-family: system-ui, sans-serif; margin: 2rem; max-width: 720px; color: #101828; }
+  h1 { font-size: 1.25rem; } h2 { font-size: 1rem; margin-top: 2rem; }
+  .campo { margin-bottom: 1rem; }
+  label { display: block; font-weight: 600; margin-bottom: .25rem; }
+  input { padding: .5rem; border: 1px solid #98a2b3; border-radius: 6px; width: 100%; }
+  input[aria-invalid="true"] { border-color: var(--err); }
+  .error { color: var(--err); font-size: .85rem; margin: .25rem 0 0; }
+  button { background: #1e3a5f; color: #fff; border: 0; padding: .6rem 1.2rem; border-radius: 6px; font-weight: 600; }
+  button[disabled] { opacity: .5; }
+  table { border-collapse: collapse; width: 100%; margin-top: .5rem; }
+  th, td { border-bottom: 1px solid #eaecf0; text-align: left; padding: .4rem; font-size: .9rem; }
+</style>
+</head>
+<body>
+  <h1>Alta de producto</h1>
+
+  <form id="form-producto" novalidate>
+    <div class="campo">
+      <label for="nombre">Nombre</label>
+      <input id="nombre" name="nombre" type="text" required minlength="3" autocomplete="off">
+      <p class="error" data-error-for="nombre" role="alert" hidden></p>
+    </div>
+
+    <div class="campo">
+      <label for="precio">Precio</label>
+      <input id="precio" name="precio" type="number" step="0.01" required autocomplete="off">
+      <p class="error" data-error-for="precio" role="alert" hidden></p>
+    </div>
+
+    <button type="submit" id="guardar">Guardar</button>
+  </form>
+
+  <h2>Listado</h2>
+  <table>
+    <thead><tr><th>Nombre</th><th>Precio</th></tr></thead>
+    <tbody id="lista"></tbody>
+  </table>
+
+<script>
+  // Fixture de validacion en CLIENTE. No hay servidor: el "guardado" es local.
+  // El objetivo es poder probar el motor de navegador (ia/tools/browser-cdp.mjs)
+  // sin depender de ningun proyecto.
+  const form = document.getElementById('form-producto');
+  const lista = document.getElementById('lista');
+  const boton = document.getElementById('guardar');
+
+  window.__intentos = 0;   // submits intentados
+  window.__guardados = 0;  // guardados efectivos
+
+  function setError(campo, msg) {
+    const p = document.querySelector('[data-error-for="' + campo + '"]');
+    const input = document.getElementById(campo);
+    if (msg) {
+      p.textContent = msg;
+      p.hidden = false;
+      input.setAttribute('aria-invalid', 'true');
+    } else {
+      p.textContent = '';
+      p.hidden = true;
+      input.removeAttribute('aria-invalid');
+    }
+  }
+
+  function validar() {
+    const errores = [];
+    const nombre = document.getElementById('nombre').value.trim();
+    const precio = document.getElementById('precio').value.trim();
+    if (!nombre) errores.push(['nombre', 'El nombre es obligatorio']);
+    else if (nombre.length < 3) errores.push(['nombre', 'El nombre necesita al menos 3 caracteres']);
+    if (!precio) errores.push(['precio', 'El precio es obligatorio']);
+    else if (!(Number(precio) > 0)) errores.push(['precio', 'El precio debe ser mayor que cero']);
+    return errores;
+  }
+
+  form.addEventListener('submit', function (ev) {
+    ev.preventDefault();
+    window.__intentos++;
+    setError('nombre', null);
+    setError('precio', null);
+
+    const errores = validar();
+    if (errores.length) {
+      for (const par of errores) setError(par[0], par[1]);
+      const primero = document.querySelector('[aria-invalid="true"]');
+      if (primero) primero.focus();
+      return; // no se guarda nada
+    }
+
+    boton.disabled = true; // guarda de doble submit
+    setTimeout(function () {
+      const tr = document.createElement('tr');
+      tr.className = 'fila';
+      const tdNombre = document.createElement('td');
+      const tdPrecio = document.createElement('td');
+      tdNombre.className = 'col-nombre';
+      tdPrecio.className = 'col-precio';
+      // textContent escapa el contenido: un <script> se muestra como texto.
+      tdNombre.textContent = document.getElementById('nombre').value.trim();
+      tdPrecio.textContent = document.getElementById('precio').value.trim();
+      tr.appendChild(tdNombre);
+      tr.appendChild(tdPrecio);
+      lista.appendChild(tr);
+      window.__guardados++;
+      boton.disabled = false;
+      form.reset();
+    }, 250);
+  });
+</script>
+</body>
+</html>

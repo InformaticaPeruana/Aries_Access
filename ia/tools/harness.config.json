@@ -1,0 +1,53 @@
+{
+  "//": "Config del harness. Ver ia/DESIGN.md y DEC-0002/DEC-0008. Ajustada en la adopcion (DEC-0024).",
+
+  "entryBudgets": {
+    "AGENTS.md": 140,
+    "ia/INSTRUCTIONS.md": 120,
+    "ia/CURRENT.md": 60,
+    "ia-harness/CURRENT.md": 60,
+    "ia/MEMORY.md": 220,
+    "ia/specs/README.md": 140
+  },
+
+  "stateVocab": {
+    "feature": ["pending", "in_progress", "completed", "blocked"],
+    "task": ["pending", "in_progress", "done", "partial", "blocked"]
+  },
+
+  "reviewTriggers": {
+    "risks": ["alto"],
+    "areas": ["acceso-remoto", "credenciales", "portapapeles"]
+  },
+
+  "codeRoots": ["src", "public"],
+  "codeTagRegex": "(?:[A-Z]{1,4}-\\d{1,4})\\s+T\\d{2}",
+
+  "binaryExtensions": [".rar", ".zip", ".7z", ".tar", ".gz", ".exe", ".dll", ".pdf", ".docx", ".doc", ".xlsx", ".xls", ".jpg", ".jpeg", ".png"],
+
+  "knownFailuresFile": "ia/KNOWN-FAILURES.md",
+  "gatesFile": "ia/GATES.md",
+
+  "//adopted": "Puesto en true en el Paso 9 de ia/ADOPT.md. Con true, si falta AGENTS.md en la raiz, el check falla.",
+  "adopted": true,
+
+  "exceptions": {
+    "//": "Excepciones declaradas: cada una debe tener su motivo en DEC o en specs/README.md",
+    "plansWithoutSpec": [],
+    "specsWithoutPlan": [],
+    "orphanDocs": [],
+    "binaryAllow": []
+  },
+
+  "qa": {
+    "//": "Motor de navegador para las pruebas. Ver ia/qa/driver.mjs y DEC-0015. QA_ENGINE lo sobrescribe.",
+    "order": ["playwright", "cdp", "gstack"],
+    "preferred": "auto"
+  },
+
+  "tests": {
+    "//": "Comandos que ejecuta run-tests.mjs. Vacio al adoptar: no hay codigo de producto todavia (ver CHECKLIST y DEC-0024). Cada comando debe imprimir PASS/FAIL por caso, o devolver exit code.",
+    "commands": [],
+    "timeoutMs": 600000
+  }
+}

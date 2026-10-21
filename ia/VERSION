@@ -1,0 +1,3 @@
+harness: 3.1.0
+fecha: 2026-10-14
+nota: El gate se activa con un comando y un chequeo lo exige. ia/tools/install-hooks.mjs activa, verifica y PRUEBA que muerde; el chequeo gate-activo falla si el repositorio es git y el hook no esta activo (se apaga en integracion continua). Se documenta por que no puede venir activado (core.hooksPath es configuracion local; un hook que viajara seria ejecucion de codigo remoto) y como engancharlo al ciclo de vida del gestor de paquetes.

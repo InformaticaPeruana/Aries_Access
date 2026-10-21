@@ -1,0 +1,35 @@
+#!/bin/sh
+# Gate de commit del harness /ia (DEC-0002).
+#
+# Activa este hook una sola vez, desde la raiz del repo:
+#   git config core.hooksPath ia/tools/git-hooks
+#
+# Desactivalo en un caso concreto con: git commit --no-verify
+# (y justificalo en la respuesta; no es gratis).
+
+set -e
+
+if [ ! -f "ia/tools/check-harness.mjs" ]; then
+  echo "check-harness: no encuentro ia/tools/check-harness.mjs" >&2
+  echo "check-harness: ejecuta desde la raiz del repositorio." >&2
+  exit 1
+fi
+
+if command -v node >/dev/null 2>&1; then
+  NODE=node
+elif command -v node.exe >/dev/null 2>&1; then
+  NODE=node.exe
+else
+  echo "check-harness: Node no esta en PATH; no puedo verificar el harness." >&2
+  echo "check-harness: instala Node o usa 'git commit --no-verify'." >&2
+  exit 1
+fi
+
+if ! "$NODE" ia/tools/check-harness.mjs; then
+  echo "" >&2
+  echo "check-harness: FAIL. El commit quedo bloqueado por el harness." >&2
+  echo "check-harness: corrige, o usa 'git commit --no-verify' justificando el motivo." >&2
+  exit 1
+fi
+
+exit 0

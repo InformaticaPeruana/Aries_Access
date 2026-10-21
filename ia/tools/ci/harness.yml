@@ -1,0 +1,52 @@
+# Gate de integracion del harness /ia (DEC-0002).
+#
+# Copia este archivo a .github/workflows/harness.yml en la raiz del repo.
+# Comprueba que el harness sigue en verde y que un fallo cambiado no entra
+# sin actualizar KNOWN-FAILURES.md.
+
+name: harness
+
+on:
+  push:
+    paths:
+      - 'ia/**'
+      - 'AGENTS.md'
+      - '.github/workflows/harness.yml'
+  pull_request:
+    paths:
+      - 'ia/**'
+      - 'AGENTS.md'
+
+jobs:
+  check-harness:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Verificar invariantes del harness
+        run: node ia/tools/check-harness.mjs --report
+
+  # Descomenta cuando el proyecto tenga suites declaradas en
+  # ia/tools/harness.config.json -> tests.commands.
+  #
+  # tests:
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: actions/setup-node@v4
+  #       with:
+  #         node-version: '20'
+  #     - name: Preparar entorno del proyecto
+  #       run: echo "ajusta esto: dependencias, servicios, base de datos"
+  #     - name: Correr pruebas
+  #       run: node ia/tools/run-tests.mjs
+  #     - name: Subir artefactos de prueba
+  #       if: always()
+  #       uses: actions/upload-artifact@v4
+  #       with:
+  #         name: harness-artifacts
+  #         path: ia/.harness/

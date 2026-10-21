@@ -1,0 +1,29 @@
+# Finales de linea del harness.
+#
+# Por que existe este archivo: el gate de commit (tools/git-hooks/pre-commit) es un
+# script `sh`. Si Git lo entrega con CRLF en Windows, falla con "\r: command not
+# found" y el gate se rompe en silencio. Forzar LF no es cosmetico: es lo que hace
+# que el gate funcione igual en las tres plataformas.
+#
+# Viaja con la carpeta ia/, asi que tambien protege la copia en el proyecto nuevo.
+
+* text=auto eol=lf
+
+# Scripts y codigo: LF obligatorio.
+*.sh      text eol=lf
+*.mjs     text eol=lf
+*.js      text eol=lf
+*.json    text eol=lf
+*.md      text eol=lf
+*.yml     text eol=lf
+*.yaml    text eol=lf
+
+# El hook no es un .sh por nombre, se declara aparte.
+tools/git-hooks/*   text eol=lf
+
+# Binarios: que Git no los toque.
+*.png     binary
+*.jpg     binary
+*.jpeg    binary
+*.pdf     binary
+*.zip     binary
