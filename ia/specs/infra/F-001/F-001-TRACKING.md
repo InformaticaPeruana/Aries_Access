@@ -11,7 +11,7 @@ Bitácora de ejecución. **Único lugar donde vive el estado de las tareas**, ju
 
 | Tarea | Objetivo | Depende de | Estado | Evidencia |
 |-------|----------|------------|--------|-----------|
-| [T01](../../../plans/F-001/T01-verificacion-previa.md) | Verificación previa de `server01` (solo lectura) | - | blocked | 2026-10-21: el 22 del host responde pero rechaza `publickey,password` en modo no interactivo, y no hay clave SSH. Dueño: usuario. Desbloqueo: clave pública en `~humberto/.ssh/authorized_keys` de `server01` |
+| [T01](../../../plans/F-001/T01-verificacion-previa.md) | Verificación previa de `server01` (solo lectura) | - | partial | 2026-10-21: informe abajo. Falta la lista de IPs de las VMs y la prueba del 3389; `ss -ltnp` y `apache2ctl -S` necesitan sudo con contraseña |
 | [T02](../../../plans/F-001/T02-liberar-disco.md) | Liberar disco (gate) | T01 | pending | — |
 | [T03](../../../plans/F-001/T03-guacd.md) | `guacd` 1.6.0 como servicio | T02 | pending | — |
 | [T04](../../../plans/F-001/T04-postgresql.md) | PostgreSQL, esquema y usuario de base | T02 | pending | — |
@@ -41,9 +41,48 @@ Un AC, una tarea dueña ([`F-001.spec.md`](./F-001.spec.md) §Criterios de acept
 | AC12 | R1 | T09 | pending | Gate: exige reiniciar `server01` (ver Notas) |
 | AC13 | R6 | T06 | pending | — |
 
+## T01 — verificación de `server01` (2026-10-21 21:25)
+
+Salida real, sin editar. **Solo lectura**; ningún comando de escritura.
+
+| Qué | Medido |
+|---|---|
+| SO / kernel | Ubuntu 24.04.4 LTS (noble) · 6.8.0-142-generic · VMware |
+| Red | `server01` · `ens160` `192.168.18.70/24` · up 20 días · load 0.38 |
+| Disco | `/` 97G, **46G libres (51%)** · `/boot` 1.6G libres |
+| RAM | 7942 MB totales, **4597 MB disponibles** · swap 826/4096 usada |
+| `:80` | **Apache/2.4.58**, vhost `000-default`, sin SSL |
+| `:443` | **libre** |
+| `:8080` | **ocupado** (Evolution API) |
+| `:8081` | **libre** |
+| `:5432`, `:5433`, `:6543`, `:8000`, `:3000`, `:5678`, `:8443` | ocupados (Supabase, Chatwoot, n8n, Kong) |
+| `:5434` | **libre** |
+| `:4822` | **libre** |
+| `:3306`, `:33060` | MySQL local |
+| **nginx** | **no instalado** (ni unidad, ni binario) |
+| PostgreSQL | **no instalado en el host** (el de Supabase es un contenedor) |
+| Tomcat | no instalado · **`tomcat9` sin candidato en noble** · `tomcat10` 10.1.55 disponible |
+| Java | no instalado · `openjdk-17` y `openjdk-21` disponibles |
+| `guacd` | no instalado |
+| `sudo` | **pide contraseña** (el usuario está en el grupo `sudo`) |
+| Docker | servicio activo, 3 bridges · el usuario **no** está en el grupo `docker` |
+| Apache | sin `proxy`, `proxy_http`, `proxy_wstunnel`, `ssl` ni `headers` habilitados |
+
+### Consecuencias (cambian el plan)
+
+1. **T02 (liberar disco) no hace falta.** Hay 46 GB libres: el dato de "99% / 1.4 GB" del inventario de partida está desactualizado. El gate de borrado **se cancela** y T03/T04 dejan de depender de él.
+2. **El proxy del host es Apache, no nginx.** R4 y DEC-0026 nombran nginx; hay que reescribirlos para Apache (`mod_proxy_http`, `mod_proxy_wstunnel`, `mod_ssl`, `mod_headers`), sin tocar el vhost `000-default`.
+3. **`tomcat9` no está en los repositorios de noble.** Se instala del **tarball oficial de Apache** y la unidad de systemd la creamos nosotros: desaparece la incógnita del "nombre real de la unidad".
+4. **`sudo` con contraseña:** T03–T08 no pueden ejecutarse solas. Hace falta una vía (NOPASSWD acotado o que el usuario corra los scripts).
+
+### Lo que falta de T01
+
+- **IPs de las VMs Windows** y prueba de alcance al 3389 desde `server01` (el usuario no las dio todavía).
+- `ss -ltnp` y `apache2ctl -S` completos (requieren sudo con contraseña).
+
 ## Notas de ejecución
 
-- **Spec aprobada el 2026-10-21.** Nada ejecutado todavía: **T01 está `blocked` por acceso**, no por el plan. El host contesta en el 22 y ofrece `publickey,password`; no hay clave SSH en esta máquina y el agente no escribe contraseñas. Se desbloquea dejando una clave pública en `~humberto/.ssh/authorized_keys`, o ejecutando el bloque de T01 y pegando la salida.
+- **Spec aprobada el 2026-10-21.** T01 ejecutada el 2026-10-21 21:25 (`partial`): el host quedó verificado y el resultado **corrige tres supuestos** del plan (no hace falta liberar disco, el proxy es Apache y Tomcat 9 no está en los repos). Falta la lista de IPs de las VMs y la prueba del 3389.
 - **Regla de secuencia:** ninguna tarea de instalación (T03 en adelante) arranca antes de que **T02 esté `done`**. El disco está al 99% y un `apt-get install` puede tumbar Supabase o n8n.
 - **Regla de secuencia:** el vhost público del 443 (T07) **no se abre** hasta que T06 (contraseña de `guacadmin` cambiada + TOTP + límite de intentos) esté `done`. El orden está invertido a propósito respecto a lo natural.
 - **AC12 está condicionado:** exige reiniciar `server01`, que da servicio a Supabase, n8n y Chatwoot. Se ejecuta sólo en una ventana acordada y con confirmación explícita ([`../../../GATES.md`](../../../GATES.md)). Si no hay ventana, AC12 queda en `partial` con dueño y condición.

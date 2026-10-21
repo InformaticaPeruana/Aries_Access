@@ -1,7 +1,7 @@
 ---
 Feature: F-001
 Task: T01
-Status: blocked
+Status: partial
 Depends: -
 ---
 
@@ -67,7 +67,7 @@ Si preferís no dar acceso al agente: ejecutá el bloque de §Validación y peg�
 
 ## Notas
 
-- **2026-10-21 — bloqueada por acceso.** `ssh -o BatchMode=yes humberto@192.168.18.70` devuelve `Permission denied (publickey,password)`: el host está vivo y con el 22 abierto, pero no hay clave. Ver §Desbloqueo.
+- **2026-10-21 21:25 — ejecutada (solo lectura), resultado `partial`.** El informe completo está en el TRACKING. Tres supuestos del plan caen: **no hace falta liberar disco** (46 GB libres), **el proxy del host es Apache 2.4.58 y nginx no existe**, y **`tomcat9` no tiene candidato** en Ubuntu 24.04. Falta la lista de IPs de las VMs y la prueba del 3389; `ss -ltnp` necesita sudo.
 - Si el 443 no está libre, o el 3389 de las VMs no responde desde `server01`, **el plan cambia**: se para y se vuelve al usuario antes de seguir (no se improvisa una red).
 - Se fija acá la **sintaxis exacta de la versión** de `guacd` (`-v` o `--version`): AC9 no se escribe sobre un comando supuesto.
 - Se mide el disco que va a pedir el stack (paquetes + toolchain de compilación) y se corrige el techo de la spec si la medición no cuadra.
