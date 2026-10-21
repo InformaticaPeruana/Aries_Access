@@ -1,0 +1,25 @@
+# Finales de linea del repositorio (fuera de ia/, que trae el suyo).
+#
+# Por que existe este archivo: el producto se ejecuta en Linux. Los scripts de
+# ops/ y tests/ son `sh`/`mjs` que corren en server01: si Git los entrega con
+# CRLF en Windows, fallan con "\r: command not found" en el host.
+#
+# `text=auto eol=lf` normaliza tambien los archivos ya versionados.
+
+* text=auto eol=lf
+
+# Scripts y codigo: LF obligatorio.
+*.sh      text eol=lf
+*.mjs     text eol=lf
+*.js      text eol=lf
+*.json    text eol=lf
+*.md      text eol=lf
+*.yml     text eol=lf
+*.yaml    text eol=lf
+
+# Binarios: que Git no los toque.
+*.png     binary
+*.jpg     binary
+*.jpeg    binary
+*.pdf     binary
+*.zip     binary

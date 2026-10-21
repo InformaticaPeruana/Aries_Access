@@ -4,47 +4,67 @@ Información **relativamente estable**. Nada de historial: eso es [`CHANGELOG.md
 
 ## Objetivo del sistema
 
-<Qué resuelve y para quién.>
+Dar acceso a las **VMs Windows de VMware desde el navegador** con Apache Guacamole: un solo punto de entrada, con TLS, y **sin instalar ningún agente** (AnyDesk/RustDesk) dentro de los guests. Uso personal/interno de AriesDev.
 
 ## Alcance
 
-<Lo que el sistema hace. Y una sección de lo que deliberadamente no hace.>
+Guacamole desplegado de forma **nativa** en `server01`, publicado por el nginx del host con certificado válido, con usuarios nominales y segundo factor, y con una conexión RDP por VM Windows.
+
+**No hace** (deliberadamente): no implementa un panel propio todavía, no gestiona el encendido de las VMs (eso es del ESXi), no integra el hipervisor, no graba sesiones y no despliega contenedores.
 
 ## Componentes
 
 | Componente | Ruta | Stack |
 |---|---|---|
-| <...> | `<...>` | <...> |
+| Host Guacamole (`server01`) | fuera del repo: `192.168.18.70` | Ubuntu 24.04.4 LTS + `guacd` + Tomcat 9 + PostgreSQL 16 + nginx |
+| Aprovisionamiento | `ops/` | Bash idempotente, ASCII, LF |
+| Pruebas smoke | `tests/` | Node / Bash, lanzadas por el harness |
+| Panel de acceso propio (pendiente, F-002) | `public/` | HTML/CSS/JS estático |
 
 ## Tecnologías
 
-<Lenguajes, frameworks, versiones mínimas, gestores de paquetes.>
+Apache Guacamole **1.6.0** (`guacd` y webapp en la misma versión), **Tomcat 9** — no 10+: Guacamole 1.6.0 usa `javax.servlet` y Tomcat 10+ exige `jakarta.servlet` ([DEC-0026](./decisions/DEC-0026-arquitectura-despliegue-server01.md)) — con JDK 17+, PostgreSQL 16, nginx (el que ya corre en el host), Node.js solo para las herramientas del harness. Sin Docker ([DEC-0025](./decisions/DEC-0025-despliegue-nativo-sin-docker.md)).
 
 ## Módulos principales
 
-<Lista corta de módulos y su responsabilidad en una línea cada uno.>
+- `ops/` — scripts de aprovisionamiento del stack en el host, uno por etapa (10-guacd, 20-postgresql, 30-tomcat-webapp, 40-nginx-tls, 50-cuentas-totp, 60-conexion-rdp).
+- `tests/` — suite smoke que comprueba servicios, puertos y HTTPS sin abrir el navegador.
+- `public/` — panel de acceso propio (F-002, todavía no existe).
 
 ## Convenciones
 
-<Naming, estructura de carpetas, patrones por capa, formato de commits.>
+- **Commits:** Conventional Commits referenciando la feature: `feat(F-001): ...`.
+- **Trazabilidad:** cada archivo de código tocado lleva en su cabecera `// F-001 T0n` (o `# F-001 T0n` en Bash).
+- **Nombres de archivo en inglés o técnicos, siempre ASCII** ([DEC-0021](./decisions/DEC-0021-ascii-en-nombres-y-codigo.md)); la prosa va en castellano.
+- **Finales de línea LF** en todo lo que se ejecuta en Linux.
+- Los scripts del host son **idempotentes y no interactivos**: repetirlos no rompe nada.
 
 ## Restricciones importantes
 
-<Lo que condiciona el diseño: compatibilidad, normativa, límites de proveedor, presupuesto.>
+- **`server01` está compartido y en producción**: sirve Supabase, n8n, Chatwoot y Evolution API con 21 contenedores. Ningún servicio existente se para, reinicia ni reconfigura.
+- **1 vCPU y ~3.9 GiB de RAM libres**: el stack no puede dejar sin memoria a los vecinos.
+- **Disco**: liberar espacio es paso previo, y es un gate (borra respaldos).
+- **Puertos tomados**: 80 (nginx), 8080 (Evolution API), 5432/5433 (bases ajenas). De ahí `127.0.0.1:8081` y `127.0.0.1:5434` ([DEC-0026](./decisions/DEC-0026-arquitectura-despliegue-server01.md)).
+- **Sin secretos en el repo**; **sin Docker**; **nada sin spec aprobada**.
 
 ## Comandos principales
 
 | Qué | Comando |
 |---|---|
-| Instalar | `<...>` |
-| Levantar en dev | `<...>` |
-| Build | `<...>` |
-| Tests | `node ia/tools/run-tests.mjs` |
+| Instalar el stack en el host | `sudo bash ops/10-guacd.sh` … `sudo bash ops/60-conexion-rdp.sh` (uno por etapa, en orden) |
+| Levantar en dev | No aplica: el producto es el host. Recargar servicios: `sudo systemctl restart guacd tomcat9` y `sudo nginx -t && sudo systemctl reload nginx` (la unidad de Tomcat la confirma T01) |
+| Build | No aplica: sin código compilado propio. `guacd` se compila en el host desde la release 1.6.0 |
+| Tests | `node ia/tools/run-tests.mjs` (suite smoke de `tests/`) |
+| Comprobar el harness | `node ia/tools/check-harness.mjs --report` |
 
 ## Estructura del repositorio
 
 ```
-<árbol de 2 niveles, solo lo relevante>
+AGENTS.md          # entrada de sesión
+ia/                # el proceso: specs, planes, decisiones, protocolo
+ops/               # aprovisionamiento del stack en el host
+tests/             # suite smoke
+public/            # panel de acceso propio (F-002, pendiente)
 ```
 
 ## Relacionados

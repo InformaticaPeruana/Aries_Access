@@ -42,6 +42,26 @@ Files:
 * `AGENTS.md`, `ia/tools/harness.config.json`, `ia/decisions/`, `ia/research/`, `ia/CURRENT.md`, `ia/MEMORY.md`, `ia/CHECKLIST.md`, `ia/GATES.md`, `ia/BACKLOG.md`, `ia/specs/README.md`, `ia/CHANGELOG.md`
 Spec: —
 
+## 2026-10-21 19:30
+
+Task: Spec, plan y órdenes de trabajo de F-001 (despliegue nativo de Guacamole en `server01`), con revisión adversarial en tres rondas.
+Changed:
+* `ia/specs/infra/F-001/` — spec (R1–R9, AC1–AC13), TRACKING y REVIEW. `ia/plans/F-001/` — PLAN y `T01`…`T09`.
+* [DEC-0026](decisions/DEC-0026-arquitectura-despliegue-server01.md): host, nginx en vez de Caddy, puertos 8081/5434, **Tomcat 9** y RDP. Enmienda a [DEC-0025](decisions/DEC-0025-despliegue-nativo-sin-docker.md) y ampliación de `codeRoots` de [DEC-0024](decisions/DEC-0024-adopcion-aries-access.md).
+* `harness.config.json`: `codeRoots` suma `ops` y `tests`; `codeExtensions` suma `.sh` y `.mjs`.
+* `PROJECT.md` y `ARCHITECTURE.md` rellenados (estaban en plantilla); `AGENTS.md` deja de decir `UNKNOWN` en §Comandos.
+* `.gitignore` nuevo (`ia/.harness/`, secretos) y `.gitattributes` en la raíz (LF).
+* `CHECKLIST.md`: ítems 1, 3, 4 y 5 cerrados; ítem 2 a medias; ítems 8 y 9 nuevos (dominio/DNS/certificado y preparación del guest).
+* `GATES.md`: catálogo con las dos operaciones que F-001 va a pedir (borrar respaldos y reiniciar el host).
+* `BACKLOG.md`: reserva de DHCP como P0; UFW y sesiones concurrentes como P1.
+Validated:
+* PASS — `node ia/tools/check-harness.mjs --report`: 0 FAIL, 0 warn.
+* PASS — revisión adversarial en 3 rondas con contexto fresco: `RECHAZADO` → `RECHAZADO` → `APROBADO_CON_OBSERVACIONES`, con las 14 observaciones finales cerradas.
+* NOT_AVAILABLE — nada ejecutado en `server01`: la spec espera aprobación y T01 es de solo lectura.
+Files:
+* `ia/specs/infra/F-001/`, `ia/plans/F-001/`, `ia/decisions/DEC-0024-*`, `DEC-0025-*`, `DEC-0026-*`, `ia/PROJECT.md`, `ia/ARCHITECTURE.md`, `ia/CURRENT.md`, `ia/MEMORY.md`, `ia/CHECKLIST.md`, `ia/GATES.md`, `ia/BACKLOG.md`, `ia/specs/README.md`, `ia/tools/harness.config.json`, `AGENTS.md`, `.gitignore`, `.gitattributes`
+Spec: F-001
+
 ## Relacionados
 
 - Estado actual: [`CURRENT.md`](./CURRENT.md) · Mapa: [`README.md`](./README.md)

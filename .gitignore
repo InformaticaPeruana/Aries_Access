@@ -1,0 +1,22 @@
+# Artefactos locales del harness: evidencia de validacion, capturas, perfiles de
+# navegador. No se versionan (ver DEC-0014 y ia/.harness/).
+ia/.harness/
+
+# Secretos: contrasenas de base, de guacadmin y de los guests. Viven fuera del
+# repo (ver la spec F-001 y MEMORY.md, seccion Restricciones).
+*.env
+.env
+.env.*
+*.key
+*.pem
+*.p12
+*.pfx
+secrets/
+secretos/
+
+# Salidas de build y temporales.
+node_modules/
+dist/
+build/
+*.log
+tmp/

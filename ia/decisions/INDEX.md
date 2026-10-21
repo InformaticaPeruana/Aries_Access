@@ -27,8 +27,9 @@
 | [DEC-0021](./DEC-0021-ascii-en-nombres-y-codigo.md) | Nombres y código en ASCII; la prosa conserva el castellano | ACTIVE |
 | [DEC-0022](./DEC-0022-nombres-en-ingles-y-enlaces.md) | Nombres de archivo en inglés, y enlaces verificados | ACTIVE |
 | [DEC-0023](./DEC-0023-campo-nuevo-desde-su-fecha.md) | Un campo nuevo obligatorio aplica desde su fecha, no hacia atrás | ACTIVE |
-| [DEC-0024](./DEC-0024-adopcion-aries-access.md) | Adopción del harness `/ia` en Aries_Access (camino A) | ACTIVE |
-| [DEC-0025](./DEC-0025-despliegue-nativo-sin-docker.md) | Despliegue nativo del stack Guacamole, sin Docker | ACTIVE |
+| [DEC-0024](./DEC-0024-adopcion-aries-access.md) | Adopción del harness `/ia` en Aries_Access (camino A) | ACTIVE, `codeRoots` ampliado por DEC-0026 |
+| [DEC-0025](./DEC-0025-despliegue-nativo-sin-docker.md) | Despliegue nativo del stack Guacamole, sin Docker | ACTIVE, enmendada por DEC-0026 |
+| [DEC-0026](./DEC-0026-arquitectura-despliegue-server01.md) | Arquitectura de despliegue en `server01`: nginx, puertos y RDP | ACTIVE |
 
 ## Relacionados
 

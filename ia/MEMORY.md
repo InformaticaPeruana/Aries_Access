@@ -13,14 +13,16 @@ Aries_Access da acceso a las **VMs Windows de VMware desde el navegador** con Ap
 Nada está implementado todavía (adopción 2026-10-21). El flujo **previsto** es:
 
 ```
-navegador ──HTTPS──> Caddy ──> Tomcat (webapp Guacamole) ──guacd──> RDP/VNC del guest
+navegador ──HTTPS──> nginx del host (server01) ──> Tomcat (webapp Guacamole) ──guacd──> RDP del guest
 ```
+
+Y el despliegue **no vive solo**: `server01` ya sirve Supabase, n8n y Chatwoot.
 
 Cuatro cosas que hay que entender y que no se deducen del código:
 
 1. **Guacamole no habla con VMware.** Se conecta al Windows de dentro de la VM por RDP (o VNC), como si fuera un PC físico. No existe soporte de VMRC ni SPICE, ni botón de encendido: la VM tiene que estar encendida y con red.
 2. **`guacd` es el proxy de protocolos** (RDP/VNC/SSH) y la webapp es solo el cliente HTML5 que dibuja en `<canvas>` y transporta por WebSocket. Son dos procesos con versiones que deben coincidir.
-3. **El despliegue es nativo, sin Docker** ([DEC-0025](./decisions/DEC-0025-despliegue-nativo-sin-docker.md)): `guacd` + Tomcat 10+ + PostgreSQL, con `GUACAMOLE_HOME=/etc/guacamole` y las extensiones en `extensions/`.
+3. **El despliegue es nativo, sin Docker** ([DEC-0025](./decisions/DEC-0025-despliegue-nativo-sin-docker.md)): `guacd` + **Tomcat 9** + PostgreSQL, con `GUACAMOLE_HOME=/etc/guacamole` y las extensiones en `extensions/`. **No** Tomcat 10+: Guacamole 1.6.0 es `javax.servlet` y Tomcat 10+ es `jakarta.servlet`.
 4. **El portapapeles automático necesita contexto seguro.** Sin HTTPS (`localhost` aparte) `navigator.clipboard` no existe y el copiar/pegar falla **sin mensaje de error**. El TLS no es solo seguridad: es requisito funcional.
 
 ## Convenciones
@@ -49,7 +51,7 @@ Técnicos, en inglés; la frase que los contiene, en castellano ([DEC-0010](./de
 - **Nada sin spec aprobada.** Regla suprema del harness.
 - **Sin secretos en el repo:** contraseñas de PostgreSQL, de `guacadmin` y de los guests no se versionan.
 - **`guacd` no se publica**: escucha solo en la red interna o en localhost, nunca expuesto.
-- **`expose` de Caddy/Tomcat:** Guacamole detrás de un reverse proxy exige `proxy_buffering off` (o el canvas se congela).
+- **`expose` de nginx/Tomcat:** Guacamole detrás de un reverse proxy exige `proxy_buffering off` (o el canvas se congela) y pasar los encabezados `Upgrade`/`Connection` para el WebSocket.
 
 ## Trampas conocidas
 
@@ -67,7 +69,7 @@ Cosas que parecen correctas y no lo son. Este es el bloque de mayor valor: cada 
 
 ## Comandos que importan
 
-Los de este repositorio (los del stack todavía no existen: ver [`CHECKLIST.md`](./CHECKLIST.md)).
+Los de este repositorio. Los del stack (`ops/10-guacd.sh` … `ops/60-conexion-rdp.sh`) los define F-001 y todavía no se ejecutaron.
 
 | Qué | Comando |
 |---|---|
@@ -77,9 +79,10 @@ Los de este repositorio (los del stack todavía no existen: ver [`CHECKLIST.md`]
 
 ## Integraciones y dependencias externas
 
-- **Apache Guacamole 1.6.0** (`guacd` + webapp) · **Tomcat 10+** · **PostgreSQL 16** · **Caddy** para TLS. Todavía ninguna instalada.
+- **Apache Guacamole 1.6.0** (`guacd` + webapp) · **Tomcat 9** · **PostgreSQL 16** · el **nginx del host** para TLS. Todavía ninguna instalada.
 - **VMware** con las VMs Windows: el host de Guacamole solo necesita alcanzar la IP del guest; el hipervisor no se integra.
-- **Hipervisor:** Workstation/Player o ESXi/vCenter, sin confirmar (cambia el encendido y la consola de rescate).
+- **Hipervisor:** **ESXi/vCenter**. Las VMs son Pro/Enterprise/Server (RDP nativo) y la consola de rescate es la Web Console HTML5 del ESXi ([DEC-0026](./decisions/DEC-0026-arquitectura-despliegue-server01.md)).
+- **Host:** `server01` (`192.168.18.70`), Ubuntu 24.04.4 LTS — compartido con Supabase, n8n, Chatwoot y Evolution API.
 
 ## Relacionados
 

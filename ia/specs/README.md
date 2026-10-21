@@ -18,11 +18,11 @@ Todo `<FEATURE-ID>` nuevo debe aparecer en la tabla de abajo. Lo comprueba [`../
 
 ## Features
 
-Prefijos de ID (uno por módulo, consecutivo desde `001`): `F-` features, `S-` seguridad y endurecimiento, `D-` despliegue y operación. La primera prevista es **F-001** (despliegue del stack Guacamole), todavía sin spec: depende de [`../CHECKLIST.md`](../CHECKLIST.md).
+Prefijos de ID (uno por módulo, consecutivo desde `001`): `F-` features, `S-` seguridad y endurecimiento, `D-` despliegue y operación.
 
 | ID | Módulo | Título | Riesgo | Estado |
 |----|--------|--------|--------|--------|
-| — | — | (sin features todavía) | — | — |
+| [F-001](./infra/F-001/F-001.spec.md) | infra | Desplegar Guacamole nativo en `server01` con acceso RDP a las VMs del ESXi | alto | pending |
 
 ## Diferencias aceptadas / superseded
 

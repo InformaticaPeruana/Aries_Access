@@ -43,19 +43,20 @@ Ref. [`ia/decisions/DEC-0010-idioma-castellano.md`](ia/decisions/DEC-0010-idioma
 | Correr pruebas | `node ia/tools/run-tests.mjs` |
 | Autoprueba del navegador | `node ia/qa/selftest-cdp.mjs` |
 | Motores de QA disponibles | `node -e "import('./ia/qa/driver.mjs').then(m => m.listEngines().then(console.table))"` |
-| Instalar el stack | UNKNOWN — no hay host aprovisionado. Ver [`ia/CHECKLIST.md`](ia/CHECKLIST.md) |
-| Levantar en dev | UNKNOWN — no hay host aprovisionado. Nativo: recargar `guacd` y Tomcat |
-| Build | No aplica todavía: sin código de producto ni extensiones |
+| Instalar el stack | `sudo bash ops/10-guacd.sh` … `ops/60-conexion-rdp.sh`, uno por etapa (definidos en F-001; sin ejecutar todavía) |
+| Levantar en dev | No aplica: el producto es el host. Recargar: `sudo systemctl restart guacd tomcat9` · `sudo nginx -t && sudo systemctl reload nginx` (la unidad de Tomcat la confirma T01) |
+| Build | No aplica: sin código propio compilado. `guacd` se compila en el host desde la release 1.6.0 |
 
 ## Proyecto
 
-Aries_Access da acceso a las **VMs Windows de VMware desde el navegador** con Apache Guacamole: un solo punto de entrada, sin instalar agentes (AnyDesk/RustDesk) en los guests. Uso personal/interno de AriesDev. El despliegue es **nativo, sin Docker**: `guacd` + Tomcat 10+ + PostgreSQL en un host Linux, TLS con Caddy, y RDP como protocolo de acceso previsto.
+Aries_Access da acceso a las **VMs Windows de VMware desde el navegador** con Apache Guacamole: un solo punto de entrada, sin instalar agentes (AnyDesk/RustDesk) en los guests. Uso personal/interno de AriesDev. El despliegue es **nativo, sin Docker**: `guacd` + Tomcat 9 + PostgreSQL en `server01`, TLS por el **nginx del host**, y RDP como protocolo de acceso previsto. Feature en curso: **F-001** (spec pendiente de aprobación).
 
 | Componente | Ruta | Stack |
 |---|---|---|
-| Host Guacamole (pendiente F-001) | UNKNOWN | Linux + guacd + Tomcat 10+ + PostgreSQL |
-| Panel de acceso propio (pendiente) | `public/` | HTML/CSS/JS estático |
-| Código de producto | `src/` | Por definir en F-001 |
+| Host Guacamole | fuera del repo: `server01` (`192.168.18.70`) | Ubuntu 24.04 + guacd + Tomcat 9 + PostgreSQL 16 + nginx |
+| Aprovisionamiento | `ops/` | Bash idempotente (ASCII, LF) |
+| Pruebas smoke | `tests/` | Node/Bash, lanzadas por `run-tests.mjs` |
+| Panel de acceso propio (pendiente, F-002) | `public/` | HTML/CSS/JS estático |
 
 Contexto de partida (investigación, 2026-10-21): [`ia/research/2026-10-21-guacamole-vms-navegador.md`](ia/research/2026-10-21-guacamole-vms-navegador.md).
 Arquitectura: [`ia/ARCHITECTURE.md`](ia/ARCHITECTURE.md) · información estable: [`ia/PROJECT.md`](ia/PROJECT.md).

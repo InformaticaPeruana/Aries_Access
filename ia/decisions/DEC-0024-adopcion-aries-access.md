@@ -12,7 +12,7 @@ Se adopta la plantilla del harness (v3.1.0) siguiendo [`../ADOPT.md`](../ADOPT.m
 | Parámetro | Valor |
 |---|---|
 | Camino | **A** — sin código de producto que bootstrapear |
-| `codeRoots` | `src`, `public` |
+| `codeRoots` | `src`, `public` — **ampliado por [DEC-0026](./DEC-0026-arquitectura-despliegue-server01.md) a `ops` y `tests`**, y `codeExtensions` a `.sh`/`.mjs` |
 | `tests.commands` | vacío (no hay pruebas todavía; el chequeo se reporta como `SKIP`) |
 | `qa.order` | `playwright`, `cdp`, `gstack` (valor por defecto; `cdp` funciona sin instalar nada) |
 | Áreas de riesgo | `acceso-remoto`, `credenciales`, `portapapeles` |

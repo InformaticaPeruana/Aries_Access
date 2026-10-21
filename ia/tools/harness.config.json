@@ -1,5 +1,5 @@
 {
-  "//": "Config del harness. Ver ia/DESIGN.md y DEC-0002/DEC-0008. Ajustada en la adopcion (DEC-0024).",
+  "//": "Config del harness. Ver ia/DESIGN.md y DEC-0002/DEC-0008. Ajustada en la adopcion (DEC-0024) y ampliada en F-001 (DEC-0026): codeRoots suma ops y tests.",
 
   "entryBudgets": {
     "AGENTS.md": 140,
@@ -20,7 +20,9 @@
     "areas": ["acceso-remoto", "credenciales", "portapapeles"]
   },
 
-  "codeRoots": ["src", "public"],
+  "codeRoots": ["src", "public", "ops", "tests"],
+  "//codeExtensions": "Suma .sh y .mjs a los defaults: el aprovisionamiento (ops/) y la smoke suite (tests/) son codigo y llevan su etiqueta F-001 T0n.",
+  "codeExtensions": [".sh", ".mjs", ".js", ".jsx", ".ts", ".tsx", ".py", ".php", ".java", ".kt", ".cs", ".go", ".rb", ".dart", ".vue", ".svelte"],
   "codeTagRegex": "(?:[A-Z]{1,4}-\\d{1,4})\\s+T\\d{2}",
 
   "binaryExtensions": [".rar", ".zip", ".7z", ".tar", ".gz", ".exe", ".dll", ".pdf", ".docx", ".doc", ".xlsx", ".xls", ".jpg", ".jpeg", ".png"],

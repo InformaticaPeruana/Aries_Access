@@ -16,12 +16,13 @@ Lista compacta. No es documentación extensa y no lleva justificaciones largas: 
 
 ## P0 — Bloquea
 
-* [ ] Ninguno.
+* [ ] Reserva de DHCP para `server01` — con IP dinámica, el vhost y el certificado se rompen solos (feature: F-001, owner: usuario)
 
 ## P1 — Importante
 
-* [ ] Cerrar los ítems 1-4 de [`CHECKLIST.md`](./CHECKLIST.md) — sin ellos la spec de F-001 se escribiría con suposiciones (feature: F-001)
-* [ ] Declarar las pruebas del proyecto en `tests.commands` — hoy el chequeo de pruebas y la mitad de la verificación están en `SKIP` (owner: usuario)
+* [ ] Cerrar el ítem 6 de [`CHECKLIST.md`](./CHECKLIST.md) (sesiones concurrentes y quién accede) — define cuántos usuarios entran y si hace falta licencia RDS (feature: F-001, owner: usuario)
+* [ ] Activar **UFW** en `server01` — hoy está inactivo con 21 contenedores escuchando; cambiarlo afecta a todo el host y no es alcance de F-001 (owner: usuario)
+* [ ] Declarar las pruebas del proyecto en `tests.commands` — hoy el chequeo de pruebas está en `SKIP`; lo cierra T09 (feature: F-001)
 
 ## P2 — Mejora
 
@@ -30,7 +31,7 @@ Lista compacta. No es documentación extensa y no lleva justificaciones largas: 
 
 ## P3 — Ideas
 
-* [ ] TOTP en Guacamole para las cuentas que no sean la del usuario
+* [ ] TOTP para las cuentas que no sean la del usuario (F-001 sólo lo deja activo para las que entran)
 * [ ] Grabación de sesiones para auditoría (sube disco y ancho de banda)
 
 ## Roadmap (si existe)

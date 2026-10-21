@@ -37,13 +37,15 @@ Las del catálogo por defecto de [`protocol/08-gates.md`](./protocol/08-gates.md
 
 | Operación | Por qué es irreversible |
 |---|---|
+| `rm` de respaldos en `server01` (`/var/www/backups`) para liberar disco (T02) | Lo borrado no vuelve: son las copias de Supabase y de los sistemas ARIES. Sólo se conservan las más recientes, y el host está al 99% |
+| `sudo reboot` de `server01` (validación de AC12) | Tumba Supabase, n8n, Chatwoot y Evolution API mientras arranca: no hay vuelta atrás para quien esté trabajando en ese momento |
 | `DROP DATABASE guacamole_db` · borrar los datos de PostgreSQL | Se pierden usuarios, conexiones, permisos e historial. Las conexiones se pueden recrear; el historial no |
 | Recrear o borrar una conexión en Guacamole | Cambia el `connection_id`: los deep links del panel (`#/client/<TOKEN>`) dejan de resolver, y el token no es estable |
 | Reiniciar `guacd` o Tomcat con sesiones abiertas | Quien esté trabajando pierde la sesión en curso, sin aviso |
 | `git push --force` sobre la rama compartida | Rompe el trabajo de otros |
 | Restaurar un dump sobre la base de Guacamole (`psql < dump.sql`) | Pisa los datos existentes |
 
-> No aplica todavía nada de esto: no hay stack desplegado (ver [`CHECKLIST.md`](./CHECKLIST.md)). El catálogo se deja escrito antes de la primera operación destructiva, no después.
+> No aplica todavía nada de esto: no hay stack desplegado (ver [`CHECKLIST.md`](./CHECKLIST.md)). El catálogo se deja escrito antes de la primera operación destructiva, no después. Las dos primeras filas son las que va a pedir F-001 (T02 y AC12) y **están sin ejecutar**: ninguna tiene gate cerrado todavía.
 
 ---
 
