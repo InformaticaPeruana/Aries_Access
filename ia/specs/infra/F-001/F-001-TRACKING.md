@@ -14,7 +14,7 @@ Bitácora de ejecución. **Único lugar donde vive el estado de las tareas**, ju
 | [T01](../../../plans/F-001/T01-verificacion-previa.md) | Verificación previa de `server01` (solo lectura) | - | done | 2026-10-21: informe abajo (SO, disco 46 GB, puertos, Apache, ausencias, RDP a `192.168.18.41`) |
 | [T02](../../../plans/F-001/T02-liberar-disco.md) | Liberar disco (gate) — **no aplica** | T01 | done | 2026-10-21: 46 GB libres medidos en T01; **no se borró nada** |
 | [T03](../../../plans/F-001/T03-guacd.md) | `guacd` 1.6.0 como servicio | T02 | done | 2026-10-21: `guacd version 1.6.0`, `enabled`+`active`, `LISTEN 127.0.0.1:4822`, `configure` con `RDP ... yes` y `freerdp 2.x` |
-| [T04](../../../plans/F-001/T04-postgresql.md) | PostgreSQL, esquema y usuario de base | T02 | pending | — |
+| [T04](../../../plans/F-001/T04-postgresql.md) | PostgreSQL, esquema y usuario de base | T02 | done | 2026-10-21: clúster `16/guacamole` **online en 127.0.0.1:5434**, `guacamole_db` con **23 tablas** y `guacadmin`; el 5432 de Supabase sin tocar |
 | [T05](../../../plans/F-001/T05-tomcat-webapp.md) | Tomcat 9, webapp y extensiones en `127.0.0.1:8081` | T03, T04 | pending | — |
 | [T06](../../../plans/F-001/T06-cuentas-totp.md) | Cuentas endurecidas, TOTP y límite de intentos | T05 | pending | — |
 | [T07](../../../plans/F-001/T07-apache-tls.md) | vhost de Apache y TLS público | T06 | pending | — |
@@ -119,6 +119,26 @@ Del resumen de `configure` (`/var/log/guacd-build.log`):
 - Disco: **sigue al 51%** (46 GB libres). RAM disponible 4568 MB.
 - `/var/lib/guacd` y `/var/lib/guacd/drive` en `daemon:daemon 0750`; `/etc/guacamole` en `root:root 0755`.
 - **Efecto colateral declarado:** `needrestart` reinició `open-vm-tools`, `packagekit`, `polkit`, `udisks2`, `upower` y `vgauth` (servicios de sistema, no del producto). **Ningún contenedor se reinició** ("No containers need to be restarted").
+
+## T04 — PostgreSQL 16 en el 5434 (2026-10-21 22:05) — `done`
+
+Ejecutado con `sudo bash ops/20-postgresql.sh`.
+
+```
+$ pg_lsclusters
+Ver Cluster   Port Status Owner    Data directory                   Log file
+16  guacamole 5434 online postgres /var/lib/postgresql/16/guacamole /var/log/postgresql/postgresql-16-guacamole.log
+$ ss -ltn | grep 5434
+LISTEN 0      200        127.0.0.1:5434       0.0.0.0:*
+$ ss -ltn | grep 5432          # Supabase: intacto
+LISTEN 0      4096         0.0.0.0:5432       0.0.0.0:*
+```
+
+- **No se creó el clúster por defecto en el 5432**: se escribió `create_main_cluster = false` en `/etc/postgresql-common/createcluster.conf` **antes** de instalar, y el clúster se creó directamente en el **5434**.
+- `guacamole_db` con **23 tablas** `guacamole_*` y el administrador por defecto **`guacadmin`** (en `guacamole_entity`, que es donde vive el nombre en 1.6.0).
+- Contraseña del rol en `/root/guacamole-db.pass` (600, fuera del repo).
+- Esquema desde `guacamole-auth-jdbc-1.6.0.tar.gz` (sólo `postgresql/schema/*.sql`; el `upgrade/` es para instalaciones viejas). El tarball y el `.jar` quedan en `/var/cache/guacamole/` para T05.
+- **Dos fallos corregidos en el camino** (el script es idempotente y se reejecutó): `pg_conftool` escribía `listen_addresses` sin comillas y luego las duplicaba; se fija la línea con `sed`. Y el bucle del esquema recorría `upgrade/`, que no aplica a una base nueva.
 
 ## Notas de ejecución
 

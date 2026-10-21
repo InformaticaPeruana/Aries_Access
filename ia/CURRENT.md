@@ -8,27 +8,27 @@ Acceso a las VMs Windows de VMware desde el navegador con Apache Guacamole: un s
 
 ## Current Task
 
-F-001 · **T03** — `guacd` 1.6.0 como servicio. Bloqueada por `sudo` con contraseña.
+F-001 · **T05** — Tomcat 9 (tarball), la webapp y las extensiones JDBC en `127.0.0.1:8081`.
 
 ## Status
 
-`in_progress` — T01 `done` (host medido), T02 `done` por *no aplica* (46 GB libres). T03–T09 pendientes.
+`in_progress` — T01–T04 `done`. Siguen T05–T09.
 
 ## Last Completed
 
-T01 (2026-10-21): Ubuntu 24.04.4, **46 GB libres**, **Apache 2.4.58** en el 80 (no nginx), `443`/`8081`/`5434`/`4822` libres, sin PostgreSQL/Tomcat/Java/guacd. VM destino: **`DESKTOP-8T09V6F`** (Windows 10 Pro, `192.168.18.41`) con RDP+NLA y **3389 alcanzable desde `server01`**.
+**T03** (`guacd` 1.6.0 con `RDP yes`, `enabled`+`active`, `127.0.0.1:4822`) y **T04** (clúster `16/guacamole` online en `127.0.0.1:5434`, `guacamole_db` con 23 tablas y `guacadmin`). El 5432 de Supabase quedó intacto.
 
 ## Next
 
-1. Entrada **NOPASSWD** acotada en `/etc/sudoers.d/aries-access` (la crea el usuario).
-2. T03: compilar `guacd` 1.6.0 con RDP, unidad propia, `bind-host=127.0.0.1`.
-3. T04: clúster PostgreSQL en el **5434** + esquema.
+1. T05: Tomcat 9 del tarball (`/opt/tomcat9`, unidad `guacamole-tomcat`, `-Xmx512m`), la webapp 1.6.0, la extensión JDBC y el driver en `GUACAMOLE_HOME`.
+2. T06: cambiar `guacadmin`, usuario propio, TOTP y `guacamole-auth-ban`.
+3. T07: vhost de Apache + certificado (necesita dominio y DNS).
 
 ## Blockers
 
-- **`sudo` pide contraseña** en `server01`: sin NOPASSWD, T03–T08 no se pueden ejecutar. Dueño: usuario.
-- **Dominio, DNS y certificado** (ítem 8 de [`CHECKLIST.md`](./CHECKLIST.md)): bloquean T07, no lo anterior.
-- **Credenciales del guest** (`usuario` de Windows): se necesitan en T08 y se cargan en Guacamole, no en el repo.
+- **Dominio, DNS y certificado** (ítem 8 de [`CHECKLIST.md`](./CHECKLIST.md)): bloquean T07.
+- **Credenciales del guest** (`usuario` de Windows en `192.168.18.41`): se necesitan en T08 y se cargan en Guacamole, no en el repo.
+- **Reserva de DHCP de `server01`** (ítem 7): no bloquea, pero el certificado se romperá el día que cambie la IP.
 
 ## Active Spec
 
