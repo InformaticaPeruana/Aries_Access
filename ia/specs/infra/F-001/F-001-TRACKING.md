@@ -15,7 +15,7 @@ Bitácora de ejecución. **Único lugar donde vive el estado de las tareas**, ju
 | [T02](../../../plans/F-001/T02-liberar-disco.md) | Liberar disco (gate) — **no aplica** | T01 | done | 2026-10-21: 46 GB libres medidos en T01; **no se borró nada** |
 | [T03](../../../plans/F-001/T03-guacd.md) | `guacd` 1.6.0 como servicio | T02 | done | 2026-10-21: `guacd version 1.6.0`, `enabled`+`active`, `LISTEN 127.0.0.1:4822`, `configure` con `RDP ... yes` y `freerdp 2.x` |
 | [T04](../../../plans/F-001/T04-postgresql.md) | PostgreSQL, esquema y usuario de base | T02 | done | 2026-10-21: clúster `16/guacamole` **online en 127.0.0.1:5434**, `guacamole_db` con **23 tablas** y `guacadmin`; el 5432 de Supabase sin tocar |
-| [T05](../../../plans/F-001/T05-tomcat-webapp.md) | Tomcat 9, webapp y extensiones en `127.0.0.1:8081` | T03, T04 | pending | — |
+| [T05](../../../plans/F-001/T05-tomcat-webapp.md) | Tomcat 9, webapp y extensiones en `127.0.0.1:8081` | T03, T04 | done | 2026-10-21: Tomcat **9.0.123** + webapp **1.6.0**, `-Xmx512m`, extensión JDBC y driver 42.7.2; **`authToken` real** con `dataSource: postgresql` |
 | [T06](../../../plans/F-001/T06-cuentas-totp.md) | Cuentas endurecidas, TOTP y límite de intentos | T05 | pending | — |
 | [T07](../../../plans/F-001/T07-apache-tls.md) | vhost de Apache y TLS público | T06 | pending | — |
 | [T08](../../../plans/F-001/T08-conexion-rdp.md) | Conexión RDP a la VM Windows | T07 | pending | — |
@@ -27,15 +27,15 @@ Un AC, una tarea dueña ([`F-001.spec.md`](./F-001.spec.md) §Criterios de acept
 
 | AC | Requerimiento | Tarea | Estado | Evidencia |
 |----|---------------|-------|--------|-----------|
-| AC1 | R1 | T05 | pending | — |
-| AC2 | R3 | T05 | pending | — |
-| AC3 | R5 | T04 | pending | — |
-| AC4 | R5 | T05 | pending | — |
+| AC1 | R1 | T05 | done | `guacd` y `guacamole-tomcat` `enabled`+`active`; clúster `16/guacamole` online |
+| AC2 | R3 | T05 | done | `127.0.0.1:4822`, `127.0.0.1:5434`, `[::ffff:127.0.0.1]:8081`; **ninguno en `0.0.0.0`** |
+| AC3 | R5 | T04 | done | `\dt` con `guacamole_user`/`guacamole_db` lista las tablas `guacamole_*` (23) |
+| AC4 | R5 | T05 | done | `POST /api/tokens` → `authToken` con `dataSource: postgresql` |
 | AC5 | R6 | T06 | pending | — |
 | AC6 | R4 | T07 | pending | — |
 | AC7 | R7 | T08 | pending | — |
 | AC8 | R7 | T08 | pending | — |
-| AC9 | R2 | T05 | pending | — |
+| AC9 | R2 | T05 | done | guacd 1.6.0 · webapp 1.6.0 (`pom.properties`) · extensión 1.6.0 · driver 42.7.2 · Tomcat 9.0.123 (JVM built 21, corre en Java 17) |
 | AC10 | R9 | T09 | pending | — |
 | AC11 | R8 | T09 | pending | — |
 | AC12 | R1 | T09 | pending | Gate: exige reiniciar `server01` (ver Notas) |
@@ -139,6 +139,38 @@ LISTEN 0      4096         0.0.0.0:5432       0.0.0.0:*
 - Contraseña del rol en `/root/guacamole-db.pass` (600, fuera del repo).
 - Esquema desde `guacamole-auth-jdbc-1.6.0.tar.gz` (sólo `postgresql/schema/*.sql`; el `upgrade/` es para instalaciones viejas). El tarball y el `.jar` quedan en `/var/cache/guacamole/` para T05.
 - **Dos fallos corregidos en el camino** (el script es idempotente y se reejecutó): `pg_conftool` escribía `listen_addresses` sin comillas y luego las duplicaba; se fija la línea con `sed`. Y el bucle del esquema recorría `upgrade/`, que no aplica a una base nueva.
+
+## T05 — Tomcat 9 + webapp 1.6.0 (2026-10-21 22:20) — `done`
+
+Ejecutado con `sudo bash ops/30-tomcat-webapp.sh`.
+
+```
+$ systemctl is-enabled guacamole-tomcat ; systemctl is-active guacamole-tomcat
+enabled
+active
+$ ss -ltn | grep -E ':(4822|5434|8081)'
+LISTEN 0 200        127.0.0.1:5434    0.0.0.0:*
+LISTEN 0   5        127.0.0.1:4822    0.0.0.0:*
+LISTEN 0 100  [::ffff:127.0.0.1]:8081        *:*
+$ curl -sI http://127.0.0.1:8081/guacamole/ | head -1
+HTTP/1.1 200
+$ ps -o args= -C java | grep -o -- '-Xmx[0-9]*m'
+-Xmx512m
+$ curl -s -X POST .../api/tokens -d 'username=guacadmin&password=guacadmin'
+{"authToken":"<oculto>","username":"guacadmin","dataSource":"postgresql","availableDataSources":["postgresql","postgresql-shared"]}
+```
+
+**Versiones (AC9):** Tomcat **9.0.123** (tarball oficial) · webapp **1.6.0** (`META-INF/maven/org.apache.guacamole/guacamole/pom.properties`, sha256 `b41ceb1e…6e716`) · extensión `guacamole-auth-jdbc-postgresql-1.6.0.jar` · driver **42.7.2** (`libpostgresql-jdbc-java`) · Java **17.0.20.1**.
+
+**Decisiones de la tarea, tal como quedaron:**
+
+- Tomcat 9 del tarball en `/opt/tomcat9`, usuario de servicio `guacamole` sin shell, unidad propia con `Type=forking` y `CATALINA_PID`.
+- Conector `port="8081" address="127.0.0.1"` y **`RemoteIpValve`** (`internalProxies="127.0.0.1"`) ya puestos: T07 sólo tiene que mandar `X-Forwarded-For`.
+- `setenv.sh` con **`-Xmx512m`** y `-DGUACAMOLE_HOME=/etc/guacamole`.
+- Se borraron `docs`, `examples`, `manager`, `host-manager` y `ROOT` de `webapps/`.
+- `guacamole.properties` en **`0640 root:guacamole`** (contiene la contraseña de la base, que se lee de `/root/guacamole-db.pass`).
+- **Fallo corregido:** `/etc/guacamole` quedó en `0750` y `guacd` (usuario `daemon`) no podía leerlo; el propio `guacd -v` lo delataba con `Unable to open "/etc/guacamole/guacd.conf": Permission denied`. Se pasó a `0755` en los directorios y se mantiene `0640` en el fichero sensible. `guacd` sigue `active` y en `127.0.0.1:4822`.
+- RAM tras el despliegue: 4333 MB disponibles (antes 4568). Disco 52%.
 
 ## Notas de ejecución
 

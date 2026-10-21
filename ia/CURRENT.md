@@ -8,21 +8,21 @@ Acceso a las VMs Windows de VMware desde el navegador con Apache Guacamole: un s
 
 ## Current Task
 
-F-001 · **T05** — Tomcat 9 (tarball), la webapp y las extensiones JDBC en `127.0.0.1:8081`.
+F-001 · **T06** — cuentas endurecidas, TOTP y límite de intentos (`guacamole-auth-ban`).
 
 ## Status
 
-`in_progress` — T01–T04 `done`. Siguen T05–T09.
+`in_progress` — T01–T05 `done`. Siguen T06–T09.
 
 ## Last Completed
 
-**T03** (`guacd` 1.6.0 con `RDP yes`, `enabled`+`active`, `127.0.0.1:4822`) y **T04** (clúster `16/guacamole` online en `127.0.0.1:5434`, `guacamole_db` con 23 tablas y `guacadmin`). El 5432 de Supabase quedó intacto.
+**T05**: Tomcat **9.0.123** + webapp **1.6.0** + extensión JDBC y driver 42.7.2, con `-Xmx512m`, escuchando en `127.0.0.1:8081`. **`authToken` real** con `dataSource: postgresql`, así que la webapp autentica contra la base.
 
 ## Next
 
-1. T05: Tomcat 9 del tarball (`/opt/tomcat9`, unidad `guacamole-tomcat`, `-Xmx512m`), la webapp 1.6.0, la extensión JDBC y el driver en `GUACAMOLE_HOME`.
-2. T06: cambiar `guacadmin`, usuario propio, TOTP y `guacamole-auth-ban`.
-3. T07: vhost de Apache + certificado (necesita dominio y DNS).
+1. T06: contraseña nueva de `guacadmin`, usuario propio, **TOTP** y **`guacamole-auth-ban`** (AC5 y AC13). Necesita el modelo de acceso del ítem 6 del CHECKLIST.
+2. T07: vhost de Apache + certificado (necesita dominio y DNS).
+3. T08: conexión RDP a `192.168.18.41` (necesita el usuario y la contraseña de Windows).
 
 ## Blockers
 
