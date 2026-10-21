@@ -8,21 +8,21 @@ Acceso a las VMs Windows de VMware desde el navegador con Apache Guacamole: un s
 
 ## Current Task
 
-F-001 · **T06** — cuentas endurecidas, TOTP y límite de intentos (`guacamole-auth-ban`).
+F-001 · **T07** — vhost de Apache y TLS público. **Bloqueada**: falta dominio y DNS.
 
 ## Status
 
-`in_progress` — T01–T05 `done`. Siguen T06–T09.
+`in_progress` — T01–T05 `done`, **T06 `partial`** (falta el enrolamiento TOTP del usuario). T07–T09 pendientes.
 
 ## Last Completed
 
-**T05**: Tomcat **9.0.123** + webapp **1.6.0** + extensión JDBC y driver 42.7.2, con `-Xmx512m`, escuchando en `127.0.0.1:8081`. **`authToken` real** con `dataSource: postgresql`, así que la webapp autentica contra la base.
+**T06**: `guacadmin`/`guacadmin` rechazado, usuario `humberto` creado, TOTP exigido (`TOTP.INFO_ENROLL_REQUIRED`) y límite de intentos con **HTTP 429** tras 5 fallos. Contraseñas en `/root/guacadmin.pass` y `/root/humberto.pass`.
 
 ## Next
 
-1. T06: contraseña nueva de `guacadmin`, usuario propio, **TOTP** y **`guacamole-auth-ban`** (AC5 y AC13). Necesita el modelo de acceso del ítem 6 del CHECKLIST.
-2. T07: vhost de Apache + certificado (necesita dominio y DNS).
-3. T08: conexión RDP a `192.168.18.41` (necesita el usuario y la contraseña de Windows).
+1. **Cerrar T06**: el usuario entra a `http://192.168.18.70:8081/guacamole/` (desde la LAN), enrola el TOTP con su app y se prueba el código caducado (AC5 3/3).
+2. **T07**: vhost de Apache + certificado. Necesita **dominio, DNS y reenvío del 443** (y del 80 si se usa `webroot`).
+3. **T08**: conexión RDP a `192.168.18.41`. Necesita el **usuario y la contraseña de Windows**.
 
 ## Blockers
 

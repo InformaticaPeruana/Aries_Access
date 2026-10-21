@@ -16,7 +16,7 @@ Bitácora de ejecución. **Único lugar donde vive el estado de las tareas**, ju
 | [T03](../../../plans/F-001/T03-guacd.md) | `guacd` 1.6.0 como servicio | T02 | done | 2026-10-21: `guacd version 1.6.0`, `enabled`+`active`, `LISTEN 127.0.0.1:4822`, `configure` con `RDP ... yes` y `freerdp 2.x` |
 | [T04](../../../plans/F-001/T04-postgresql.md) | PostgreSQL, esquema y usuario de base | T02 | done | 2026-10-21: clúster `16/guacamole` **online en 127.0.0.1:5434**, `guacamole_db` con **23 tablas** y `guacadmin`; el 5432 de Supabase sin tocar |
 | [T05](../../../plans/F-001/T05-tomcat-webapp.md) | Tomcat 9, webapp y extensiones en `127.0.0.1:8081` | T03, T04 | done | 2026-10-21: Tomcat **9.0.123** + webapp **1.6.0**, `-Xmx512m`, extensión JDBC y driver 42.7.2; **`authToken` real** con `dataSource: postgresql` |
-| [T06](../../../plans/F-001/T06-cuentas-totp.md) | Cuentas endurecidas, TOTP y límite de intentos | T05 | pending | — |
+| [T06](../../../plans/F-001/T06-cuentas-totp.md) | Cuentas endurecidas, TOTP y límite de intentos | T05 | partial | 2026-10-21: `guacadmin`/`guacadmin` **rechazado**, usuario `humberto` creado, TOTP instalado y **exigido** (`TOTP.INFO_ENROLL_REQUIRED`), ban con **HTTP 429** tras 5 fallos. **Falta:** enrolar el dispositivo del usuario y comprobar el código caducado (AC5 3/3) |
 | [T07](../../../plans/F-001/T07-apache-tls.md) | vhost de Apache y TLS público | T06 | pending | — |
 | [T08](../../../plans/F-001/T08-conexion-rdp.md) | Conexión RDP a la VM Windows | T07 | pending | — |
 | [T09](../../../plans/F-001/T09-smoke-test.md) | Suite smoke, `tests.commands` y reinicio | T07 | pending | — |
@@ -31,7 +31,7 @@ Un AC, una tarea dueña ([`F-001.spec.md`](./F-001.spec.md) §Criterios de acept
 | AC2 | R3 | T05 | done | `127.0.0.1:4822`, `127.0.0.1:5434`, `[::ffff:127.0.0.1]:8081`; **ninguno en `0.0.0.0`** |
 | AC3 | R5 | T04 | done | `\dt` con `guacamole_user`/`guacamole_db` lista las tablas `guacamole_*` (23) |
 | AC4 | R5 | T05 | done | `POST /api/tokens` → `authToken` con `dataSource: postgresql` |
-| AC5 | R6 | T06 | pending | — |
+| AC5 | R6 | T06 | partial | 1/3 y 2/3 hechos: `guacadmin`/`guacadmin` rechazado y TOTP exigido (`TOTP.INFO_ENROLL_REQUIRED`). Falta 3/3: código TOTP caducado, que exige el dispositivo enrolado (usuario) |
 | AC6 | R4 | T07 | pending | — |
 | AC7 | R7 | T08 | pending | — |
 | AC8 | R7 | T08 | pending | — |
@@ -39,7 +39,7 @@ Un AC, una tarea dueña ([`F-001.spec.md`](./F-001.spec.md) §Criterios de acept
 | AC10 | R9 | T09 | pending | — |
 | AC11 | R8 | T09 | pending | — |
 | AC12 | R1 | T09 | pending | Gate: exige reiniciar `server01` (ver Notas) |
-| AC13 | R6 | T06 | pending | — |
+| AC13 | R6 | T06 | done | 5 fallos desde la misma IP → **HTTP 429** `Too many failed authentication attempts.` (`ban-max-invalid-attempts: 5`, `ban-address-duration: 300000`) |
 
 ## T01 — verificación de `server01` (2026-10-21 21:25)
 
@@ -171,6 +171,32 @@ $ curl -s -X POST .../api/tokens -d 'username=guacadmin&password=guacadmin'
 - `guacamole.properties` en **`0640 root:guacamole`** (contiene la contraseña de la base, que se lee de `/root/guacamole-db.pass`).
 - **Fallo corregido:** `/etc/guacamole` quedó en `0750` y `guacd` (usuario `daemon`) no podía leerlo; el propio `guacd -v` lo delataba con `Unable to open "/etc/guacamole/guacd.conf": Permission denied`. Se pasó a `0755` en los directorios y se mantiene `0640` en el fichero sensible. `guacd` sigue `active` y en `127.0.0.1:4822`.
 - RAM tras el despliegue: 4333 MB disponibles (antes 4568). Disco 52%.
+
+## T06 — cuentas, TOTP y `ban` (2026-10-21 22:40) — `partial`
+
+Ejecutado con `sudo bash ops/40-cuentas-totp.sh`.
+
+```
+$ curl -s -X POST .../api/tokens -d 'username=guacadmin&password=guacadmin'
+{"message":"Invalid login",...}
+$ curl -s -X POST .../api/tokens -d "username=humberto&password=<guardada>"
+{"message":"TOTP enrollment must be completed before authentication can continue",
+ "translatableMessage":{"key":"TOTP.INFO_ENROLL_REQUIRED"}, ...}
+$ # 6 intentos fallidos seguidos
+   intento 1: HTTP 403 ...  intento 4: HTTP 429 {"message":"Too many failed authentication attempts."}
+   intento 5: HTTP 429 ...  intento 6: HTTP 429 ...
+```
+
+- Extensiones activas: `guacamole-auth-jdbc-postgresql-1.6.0.jar`, `guacamole-auth-ban-1.6.0.jar`, `guacamole-auth-totp-1.6.0.jar` (las dos últimas verificadas por `sha256` contra el `.sha256` oficial).
+- Propiedades: `ban-max-invalid-attempts: 5`, `ban-address-duration: 300000`, `totp-issuer: Aries Access`.
+- `guacadmin` con contraseña nueva en `/root/guacadmin.pass`; usuario **`humberto`** creado, contraseña en `/root/humberto.pass` (ambos `600`).
+- **Cómo se cambia la contraseña (dato que cuesta descubrir):** `PUT /api/session/data/postgresql/users/{usuario}/password` con `{"oldPassword":"...","newPassword":"..."}`. `PUT /users/{usuario}` devuelve **403** con el mensaje que lo explica, y `PATCH` no existe para esto (405).
+
+### Por qué `partial` y no `done`
+
+- **AC5 (3/3) pendiente:** comprobar que un código TOTP de hace 5 minutos no entra exige que el usuario **enrole su dispositivo** (QR en el navegador). Eso no lo puede hacer el agente.
+- Mientras no esté, AC5 no cierra y T06 tampoco.
+- **Efecto operativo declarado:** con TOTP activo, el login por API sin código deja de servir. Para la automatización de T08 (crear la conexión) hay que **apartar `guacamole-auth-totp-1.6.0.jar`**, hacer la llamada y volverlo a poner. Se hace así y se registra.
 
 ## Notas de ejecución
 
