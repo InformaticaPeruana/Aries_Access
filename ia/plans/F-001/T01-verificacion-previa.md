@@ -1,7 +1,7 @@
 ---
 Feature: F-001
 Task: T01
-Status: pending
+Status: blocked
 Depends: -
 ---
 
@@ -42,6 +42,23 @@ ssh humberto@192.168.18.70 'sudo nginx -T > /tmp/nginx-antes.txt && wc -l /tmp/n
 
 Cierra cuando el TRACKING tenga: la salida real de cada bloque, la **lista de VMs alcanzables**, el **tamaño medido** de lo que hay que instalar y los **nombres reales de las unidades** de Tomcat y PostgreSQL.
 
+## Desbloqueo
+
+Desde esta máquina (Windows), sin pedir contraseñas al agente:
+
+```powershell
+# 1. crear la clave si no existe (no toca nada del host)
+ssh-keygen -t ed25519 -f "$env:USERPROFILE\.ssh\id_ed25519" -N '""'
+
+# 2. instalarla en el host (pide la contraseña UNA vez, a vos)
+type "$env:USERPROFILE\.ssh\id_ed25519.pub" | ssh humberto@192.168.18.70 "mkdir -p ~/.ssh && chmod 700 ~/.ssh && cat >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys"
+
+# 3. comprobar que ya es no interactivo
+ssh -o BatchMode=yes humberto@192.168.18.70 "hostname"
+```
+
+Si preferís no dar acceso al agente: ejecutá el bloque de §Validación y pegá la salida; se registra como evidencia y T01 cierra igual.
+
 ## Trazabilidad
 
 ```
@@ -50,6 +67,7 @@ Cierra cuando el TRACKING tenga: la salida real de cada bloque, la **lista de VM
 
 ## Notas
 
+- **2026-10-21 — bloqueada por acceso.** `ssh -o BatchMode=yes humberto@192.168.18.70` devuelve `Permission denied (publickey,password)`: el host está vivo y con el 22 abierto, pero no hay clave. Ver §Desbloqueo.
 - Si el 443 no está libre, o el 3389 de las VMs no responde desde `server01`, **el plan cambia**: se para y se vuelve al usuario antes de seguir (no se improvisa una red).
 - Se fija acá la **sintaxis exacta de la versión** de `guacd` (`-v` o `--version`): AC9 no se escribe sobre un comando supuesto.
 - Se mide el disco que va a pedir el stack (paquetes + toolchain de compilación) y se corrige el techo de la spec si la medición no cuadra.

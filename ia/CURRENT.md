@@ -8,25 +8,24 @@ Acceso a las VMs Windows de VMware desde el navegador con Apache Guacamole: un s
 
 ## Current Task
 
-F-001 · T01 — verificación previa de `server01`, **solo lectura**. Nada ejecutado todavía.
+F-001 · T01 — verificación previa de `server01`, **solo lectura**. `blocked` por acceso SSH.
 
 ## Status
 
-`pending` — la spec de F-001 está escrita y **espera aprobación explícita**; todavía no se tocó `server01`.
+`in_progress` (spec **aprobada** el 2026-10-21). T01 bloqueada: falta la clave SSH.
 
 ## Last Completed
 
-Spec, plan y órdenes de trabajo (T01–T09) de F-001, con [DEC-0026](./decisions/DEC-0026-arquitectura-despliegue-server01.md) y la revisión adversarial de la spec (2026-10-21).
+Spec, plan y órdenes de trabajo (T01–T09) de F-001, con [DEC-0026](./decisions/DEC-0026-arquitectura-despliegue-server01.md) y la revisión adversarial en tres rondas (`APROBADO_CON_OBSERVACIONES`).
 
 ## Next
 
-Aprobar la spec y ejecutar T01: puertos libres, disco y RAM reales, estado de nginx y **alcance RDP a las VMs del ESXi** desde `server01`.
+Desbloquear T01 (clave pública en `~humberto/.ssh/authorized_keys` de `server01` o pegar la salida de su bloque de validación) y ejecutarla: puertos libres, disco y RAM reales, estado de nginx, clústeres de PostgreSQL y **alcance RDP a las VMs del ESXi**.
 
 ## Blockers
 
-- **Aprobación de la spec de F-001:** dueño el usuario. Sin ella no se ejecuta nada en el host.
-- **Acceso SSH a `server01`:** las tareas se ejecutan por SSH; el repo no guarda credenciales.
-- **Datos por cerrar:** ítem 6 de [`CHECKLIST.md`](./CHECKLIST.md) — cuántas VMs y cuántas personas entran a la vez.
+- **Acceso SSH a `server01`:** el 22 responde pero rechaza `publickey,password` en modo no interactivo y no hay clave en esta máquina. Dueño: usuario. Ver §Desbloqueo de [`plans/F-001/T01-verificacion-previa.md`](./plans/F-001/T01-verificacion-previa.md).
+- **Datos por cerrar:** ítems 2, 6, 8 y 9 de [`CHECKLIST.md`](./CHECKLIST.md) — lista de VMs, sesiones concurrentes, dominio/DNS/certificado y preparación del guest.
 
 ## Active Spec
 

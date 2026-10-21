@@ -1,6 +1,6 @@
 ---
 Feature: F-001
-Estado: pending
+Estado: in_progress
 ---
 
 # F-001 — TRACKING
@@ -11,7 +11,7 @@ Bitácora de ejecución. **Único lugar donde vive el estado de las tareas**, ju
 
 | Tarea | Objetivo | Depende de | Estado | Evidencia |
 |-------|----------|------------|--------|-----------|
-| [T01](../../../plans/F-001/T01-verificacion-previa.md) | Verificación previa de `server01` (solo lectura) | - | pending | — |
+| [T01](../../../plans/F-001/T01-verificacion-previa.md) | Verificación previa de `server01` (solo lectura) | - | blocked | 2026-10-21: el 22 del host responde pero rechaza `publickey,password` en modo no interactivo, y no hay clave SSH. Dueño: usuario. Desbloqueo: clave pública en `~humberto/.ssh/authorized_keys` de `server01` |
 | [T02](../../../plans/F-001/T02-liberar-disco.md) | Liberar disco (gate) | T01 | pending | — |
 | [T03](../../../plans/F-001/T03-guacd.md) | `guacd` 1.6.0 como servicio | T02 | pending | — |
 | [T04](../../../plans/F-001/T04-postgresql.md) | PostgreSQL, esquema y usuario de base | T02 | pending | — |
@@ -43,7 +43,7 @@ Un AC, una tarea dueña ([`F-001.spec.md`](./F-001.spec.md) §Criterios de acept
 
 ## Notas de ejecución
 
-- **Nada ejecutado todavía.** La spec está escrita y espera aprobación explícita; la primera tarea (T01) es de solo lectura.
+- **Spec aprobada el 2026-10-21.** Nada ejecutado todavía: **T01 está `blocked` por acceso**, no por el plan. El host contesta en el 22 y ofrece `publickey,password`; no hay clave SSH en esta máquina y el agente no escribe contraseñas. Se desbloquea dejando una clave pública en `~humberto/.ssh/authorized_keys`, o ejecutando el bloque de T01 y pegando la salida.
 - **Regla de secuencia:** ninguna tarea de instalación (T03 en adelante) arranca antes de que **T02 esté `done`**. El disco está al 99% y un `apt-get install` puede tumbar Supabase o n8n.
 - **Regla de secuencia:** el vhost público del 443 (T07) **no se abre** hasta que T06 (contraseña de `guacadmin` cambiada + TOTP + límite de intentos) esté `done`. El orden está invertido a propósito respecto a lo natural.
 - **AC12 está condicionado:** exige reiniciar `server01`, que da servicio a Supabase, n8n y Chatwoot. Se ejecuta sólo en una ventana acordada y con confirmación explícita ([`../../../GATES.md`](../../../GATES.md)). Si no hay ventana, AC12 queda en `partial` con dueño y condición.
