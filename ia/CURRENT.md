@@ -8,27 +8,27 @@ Acceso a las VMs Windows de VMware desde el navegador con Apache Guacamole: un s
 
 ## Current Task
 
-F-001 · **T07** — vhost de Apache y TLS público. **Bloqueada**: falta dominio y DNS.
+F-001 · **T08** — conexión RDP a `192.168.18.41`. Bloqueada: faltan las credenciales de Windows.
 
 ## Status
 
-`in_progress` — T01–T05 `done`, **T06 `partial`** (falta el enrolamiento TOTP del usuario). T07–T09 pendientes.
+`in_progress` — T01–T05 `done`; **T06 y T07 `partial`** (falta el enrolamiento TOTP y el nginx del usuario). T08–T09 pendientes.
 
 ## Last Completed
 
-**T06**: `guacadmin`/`guacadmin` rechazado, usuario `humberto` creado, TOTP exigido (`TOTP.INFO_ENROLL_REQUIRED`) y límite de intentos con **HTTP 429** tras 5 fallos. Contraseñas en `/root/guacadmin.pass` y `/root/humberto.pass`.
+**T07 (lado `server01`)**: Apache publica `https://192.168.18.70/guacamole/` con certificado propio (`200` local), **solo** acepta a `192.168.18.203` (desde otra IP: `403`) y el límite de intentos separa por IP de cliente con `X-Forwarded-For` (verificado: 5 fallos de una IP bloquean solo a esa).
 
 ## Next
 
-1. **Cerrar T06**: el usuario entra a `http://192.168.18.70:8081/guacamole/` (desde la LAN), enrola el TOTP con su app y se prueba el código caducado (AC5 3/3).
-2. **T07**: vhost de Apache + certificado. Necesita **dominio, DNS y reenvío del 443** (y del 80 si se usa `webroot`).
+1. **Vos:** publicar `/guacamole/` en tu nginx (`192.168.18.203`) apuntando a `https://192.168.18.70/guacamole/`; decir en qué **puerto** y con qué TLS, para cerrar AC6.
+2. **Vos:** enrolar el TOTP de `humberto` (QR) para cerrar AC5.
 3. **T08**: conexión RDP a `192.168.18.41`. Necesita el **usuario y la contraseña de Windows**.
 
 ## Blockers
 
-- **Dominio, DNS y certificado** (ítem 8 de [`CHECKLIST.md`](./CHECKLIST.md)): bloquean T07.
+- **El nginx del usuario** (`192.168.18.203`): bloquea AC6, no el resto.
 - **Credenciales del guest** (`usuario` de Windows en `192.168.18.41`): se necesitan en T08 y se cargan en Guacamole, no en el repo.
-- **Reserva de DHCP de `server01`** (ítem 7): no bloquea, pero el certificado se romperá el día que cambie la IP.
+- **Reserva de DHCP de `server01`** (ítem 7): no bloquea, pero el vhost y el certificado interno se romperán el día que cambie la IP.
 
 ## Active Spec
 

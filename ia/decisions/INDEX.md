@@ -30,6 +30,7 @@
 | [DEC-0024](./DEC-0024-adopcion-aries-access.md) | Adopción del harness `/ia` en Aries_Access (camino A) | ACTIVE, `codeRoots` ampliado por DEC-0026 |
 | [DEC-0025](./DEC-0025-despliegue-nativo-sin-docker.md) | Despliegue nativo del stack Guacamole, sin Docker | ACTIVE, enmendada por DEC-0026 |
 | [DEC-0026](./DEC-0026-arquitectura-despliegue-server01.md) | Arquitectura de despliegue en `server01`: nginx, puertos y RDP | ACTIVE |
+| [DEC-0027](./DEC-0027-nginx-externo-y-apache-backend.md) | TLS público en un nginx externo y Apache como backend en `server01` | ACTIVE |
 
 ## Relacionados
 

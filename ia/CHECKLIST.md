@@ -59,13 +59,12 @@ Registro de los datos que hay que conseguir de **fuentes externas** (cliente, pr
 - **Bloquea:** AC6 (vhost y certificado) de forma diferida (funciona hoy; se rompe sin aviso el día que cambie la IP).
 
 ### 8. Dominio, DNS y certificado
-- [ ] Cuál es el **dominio** público y quién controla su zona DNS.
-- [ ] **Reenvío del 443** en el router hacia `server01`, y que el 443 esté libre también **fuera** del host.
-- [ ] Si se emite con `webroot`, hace falta además el **80 entrante** desde Internet (HTTP-01). Si el 80 no puede abrirse, se usa `dns-01`.
-- [ ] Método de emisión del certificado: `webroot` o `dns-01` (**nunca** `certbot --nginx`, que reescribe vhosts ajenos).
+- [x] **El tramo interno ya no depende del dominio**: `server01` usa un certificado propio para el salto desde nginx ([DEC-0027](./decisions/DEC-0027-nginx-externo-y-apache-backend.md)).
+- [ ] **En el nginx del usuario** (`192.168.18.203`): qué dominio publica, en qué puerto y con qué TLS. Es su infraestructura; el agente no la toca.
 - **Dueño:** usuario
-- **Condición de cierre:** dominio, zona DNS y método anotados en la spec de F-001.
-- **Bloquea:** T07. **No bloquea** la spec.
+- **Condición de cierre:** la URL pública responde con certificado válido y publica `/guacamole/` (AC6).
+- **Bloquea:** AC6 (T07), no el resto.
+- **Riesgo abierto:** si ese nginx publica en el **puerto 81 sin TLS**, el login viaja en claro por Internet y AC6 no se cumple.
 
 ### 9. Preparación del guest Windows ✅
 - [x] RDP habilitado (`fDenyTSConnections=0`) y **NLA activo** (`UserAuthentication=1`, `SecurityLayer=2`).

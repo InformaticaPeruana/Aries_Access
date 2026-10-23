@@ -26,6 +26,8 @@ Lista compacta. No es documentación extensa y no lleva justificaciones largas: 
 
 ## P2 — Mejora
 
+* [ ] Renovar el certificado interno de `server01` antes del **2029-01-25** (`/etc/ssl/guacamole/`, autofirmado, sin ACME) — owner: usuario
+* [ ] Averiguar por qué `%a` del access log de Tomcat sigue mostrando la IP del proxy aunque el ban ya separa por IP de cliente con `X-Forwarded-For` (observado en T07) — owner: agente
 * [ ] Panel de acceso propio en `public/` con tarjetas y deep links a cada conexión (feature: F-002)
 * [ ] Extensión de branding (`.jar` con `guac-manifest.json`) para el login y la cabecera (owner: usuario)
 

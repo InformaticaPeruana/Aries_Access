@@ -17,7 +17,7 @@ Bitácora de ejecución. **Único lugar donde vive el estado de las tareas**, ju
 | [T04](../../../plans/F-001/T04-postgresql.md) | PostgreSQL, esquema y usuario de base | T02 | done | 2026-10-21: clúster `16/guacamole` **online en 127.0.0.1:5434**, `guacamole_db` con **23 tablas** y `guacadmin`; el 5432 de Supabase sin tocar |
 | [T05](../../../plans/F-001/T05-tomcat-webapp.md) | Tomcat 9, webapp y extensiones en `127.0.0.1:8081` | T03, T04 | done | 2026-10-21: Tomcat **9.0.123** + webapp **1.6.0**, `-Xmx512m`, extensión JDBC y driver 42.7.2; **`authToken` real** con `dataSource: postgresql` |
 | [T06](../../../plans/F-001/T06-cuentas-totp.md) | Cuentas endurecidas, TOTP y límite de intentos | T05 | partial | 2026-10-21: `guacadmin`/`guacadmin` **rechazado**, usuario `humberto` creado, TOTP instalado y **exigido** (`TOTP.INFO_ENROLL_REQUIRED`), ban con **HTTP 429** tras 5 fallos. **Falta:** enrolar el dispositivo del usuario y comprobar el código caducado (AC5 3/3) |
-| [T07](../../../plans/F-001/T07-apache-tls.md) | vhost de Apache y TLS público | T06 | pending | — |
+| [T07](../../../plans/F-001/T07-apache-tls.md) | vhost de Apache y TLS público | T06 | partial | 2026-10-23: **lado `server01` hecho** — 443 con certificado propio, `200` por `https://127.0.0.1/guacamole/`, ACL a `192.168.18.203`, y el ban separa por IP de cliente con `X-Forwarded-For`. **Falta el nginx del usuario** para AC6 |
 | [T08](../../../plans/F-001/T08-conexion-rdp.md) | Conexión RDP a la VM Windows | T07 | pending | — |
 | [T09](../../../plans/F-001/T09-smoke-test.md) | Suite smoke, `tests.commands` y reinicio | T07 | pending | — |
 
@@ -28,7 +28,7 @@ Un AC, una tarea dueña ([`F-001.spec.md`](./F-001.spec.md) §Criterios de acept
 | AC | Requerimiento | Tarea | Estado | Evidencia |
 |----|---------------|-------|--------|-----------|
 | AC1 | R1 | T05 | done | `guacd` y `guacamole-tomcat` `enabled`+`active`; clúster `16/guacamole` online |
-| AC2 | R3 | T05 | done | `127.0.0.1:4822`, `127.0.0.1:5434`, `[::ffff:127.0.0.1]:8081`; **ninguno en `0.0.0.0`** |
+| AC2 | R3 | T05 | done | `127.0.0.1:4822`, `127.0.0.1:5434`, `[::ffff:127.0.0.1]:8081`; **ninguno en `0.0.0.0`**. El 443 escucha en todo, pero desde `192.168.18.41` responde **403** (solo `192.168.18.203` y loopback) |
 | AC3 | R5 | T04 | done | `\dt` con `guacamole_user`/`guacamole_db` lista las tablas `guacamole_*` (23) |
 | AC4 | R5 | T05 | done | `POST /api/tokens` → `authToken` con `dataSource: postgresql` |
 | AC5 | R6 | T06 | partial | 1/3 y 2/3 hechos: `guacadmin`/`guacadmin` rechazado y TOTP exigido (`TOTP.INFO_ENROLL_REQUIRED`). Falta 3/3: código TOTP caducado, que exige el dispositivo enrolado (usuario) |
@@ -197,6 +197,44 @@ $ # 6 intentos fallidos seguidos
 - **AC5 (3/3) pendiente:** comprobar que un código TOTP de hace 5 minutos no entra exige que el usuario **enrole su dispositivo** (QR en el navegador). Eso no lo puede hacer el agente.
 - Mientras no esté, AC5 no cierra y T06 tampoco.
 - **Efecto operativo declarado:** con TOTP activo, el login por API sin código deja de servir. Para la automatización de T08 (crear la conexión) hay que **apartar `guacamole-auth-totp-1.6.0.jar`**, hacer la llamada y volverlo a poner. Se hace así y se registra.
+
+## T07 — backend HTTPS en `server01` (2026-10-23 23:55) — `partial`
+
+Ejecutado con `sudo bash ops/50-apache-tls.sh`. **El TLS público no está aquí**: lo termina el nginx del usuario en `192.168.18.203` ([DEC-0027](../../../decisions/DEC-0027-nginx-externo-y-apache-backend.md)).
+
+```
+$ ss -ltn | grep ':443'
+LISTEN 0 511 *:443 *:*
+$ apache2ctl -S
+*:443   192.168.18.70 (/etc/apache2/sites-enabled/guacamole.conf:3)
+$ curl -sk -o /dev/null -w '%{http_code}' https://127.0.0.1/guacamole/
+200
+$ openssl x509 -in /etc/ssl/guacamole/guacamole.crt -noout -subject -enddate
+subject=CN = 192.168.18.70, O = Aries_Access
+notAfter=Jan 25 23:49:34 2029 GMT
+sha256 = 21:2B:8C:...:8C:52
+```
+
+**Prueba de que el límite de intentos funciona detrás del proxy** (la que importa):
+
+```
+5 fallos con X-Forwarded-For: 198.51.100.77  -> el 5.o responde 429
+1 fallo  con X-Forwarded-For: 203.0.113.8    -> 403 "Invalid login"  (NO bloqueado)
+```
+
+Es decir: el ban cuenta **por IP de cliente**, no por la del proxy. Sin esto, cinco fallos de cualquiera habrían bloqueado a todo el mundo.
+
+### Decisiones y hallazgos de esta tarea
+
+- Certificado **propio** (`/etc/ssl/guacamole/`), SAN `IP:192.168.18.70`, 825 días: el tramo es LAN y así T07 no depende del DNS.
+- El 443 **solo acepta** `192.168.18.203` y `127.0.0.1` (`Require ip`): no hay segundo camino público.
+- `RemoteIpValve` con `internalProxies="127\.0\.0\.1|192\.168\.18\.203"`, y va **antes** del `AccessLogValve` (si va después, el log se escribe con la IP ya restaurada).
+- **Tres tropiezos, todos corregidos en el script:** (1) la válvula se insertó en medio del tag `<Host ...>`, que ocupa dos líneas, y dejó Tomcat en `503`; (2) el regex quedó con **dobles** barras invertidas; (3) el `re.sub` del patrón de log tocó una línea de comentario. El script ahora **valida el XML con `ElementTree` antes de escribir**.
+- El log de Tomcat sigue mostrando `127.0.0.1` en `%a` aunque la cabecera llega (`xff=203.0.113.9, 127.0.0.1`) y el ban sí separa por IP. Queda como observación en [`../../../BACKLOG.md`](../../../BACKLOG.md).
+
+### Falta para cerrar T07 (AC6)
+
+El nginx del usuario publicando el dominio. Cuando esté, se verifica desde fuera y AC6 cierra.
 
 ## Notas de ejecución
 
