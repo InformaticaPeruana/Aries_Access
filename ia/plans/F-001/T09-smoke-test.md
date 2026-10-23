@@ -1,7 +1,7 @@
 ---
 Feature: F-001
 Task: T09
-Status: pending
+Status: partial
 Depends: T07
 ---
 

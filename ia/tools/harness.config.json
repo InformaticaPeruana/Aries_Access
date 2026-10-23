@@ -48,8 +48,8 @@
   },
 
   "tests": {
-    "//": "Comandos que ejecuta run-tests.mjs. Vacio al adoptar: no hay codigo de producto todavia (ver CHECKLIST y DEC-0024). Cada comando debe imprimir PASS/FAIL por caso, o devolver exit code.",
-    "commands": [],
+    "//": "Comandos que ejecuta run-tests.mjs. F-001 T09: suite smoke del stack. Sin F001_HOST sale SKIP con exit 0.",
+    "commands": ["node tests/smoke.mjs"],
     "timeoutMs": 600000
   }
 }

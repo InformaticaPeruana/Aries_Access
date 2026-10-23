@@ -19,7 +19,7 @@ Bitácora de ejecución. **Único lugar donde vive el estado de las tareas**, ju
 | [T06](../../../plans/F-001/T06-cuentas-totp.md) | Cuentas endurecidas, TOTP y límite de intentos | T05 | partial | 2026-10-21: `guacadmin`/`guacadmin` **rechazado**, usuario `humberto` creado, TOTP instalado y **exigido** (`TOTP.INFO_ENROLL_REQUIRED`), ban con **HTTP 429** tras 5 fallos. **Falta:** enrolar el dispositivo del usuario y comprobar el código caducado (AC5 3/3) |
 | [T07](../../../plans/F-001/T07-apache-tls.md) | vhost de Apache y TLS público | T06 | partial | 2026-10-23: **lado `server01` hecho** — 443 con certificado propio, `200` por `https://127.0.0.1/guacamole/`, ACL a `192.168.18.203`, y el ban separa por IP de cliente con `X-Forwarded-For`. **Falta el nginx del usuario** para AC6 |
 | [T08](../../../plans/F-001/T08-conexion-rdp.md) | Conexión RDP a la VM Windows | T07 | pending | — |
-| [T09](../../../plans/F-001/T09-smoke-test.md) | Suite smoke, `tests.commands` y reinicio | T07 | pending | — |
+| [T09](../../../plans/F-001/T09-smoke-test.md) | Suite smoke, `tests.commands` y reinicio | T07 | partial | 2026-10-21/23: `tests/smoke.mjs` con **6 PASS** contra el host y **SKIP exit 0** sin entorno; AC11 cumplido. Falta AC12 (reinicio, gate) y la rama pública (depende de AC6) |
 
 ## Estado por AC
 
@@ -36,8 +36,8 @@ Un AC, una tarea dueña ([`F-001.spec.md`](./F-001.spec.md) §Criterios de acept
 | AC7 | R7 | T08 | pending | — |
 | AC8 | R7 | T08 | pending | — |
 | AC9 | R2 | T05 | done | guacd 1.6.0 · webapp 1.6.0 (`pom.properties`) · extensión 1.6.0 · driver 42.7.2 · Tomcat 9.0.123 (JVM built 21, corre en Java 17) |
-| AC10 | R9 | T09 | pending | — |
-| AC11 | R8 | T09 | pending | — |
+| AC10 | R9 | T09 | done | `node ia/tools/run-tests.mjs` → **6 PASS**, exit 0. Sin `F001_HOST`: **SKIP, exit 0**. La rama pública (`F001_PUBLIC_URL`) queda para cuando exista AC6 |
+| AC11 | R8 | T09 | done | `ops/*.sh` sin CRLF y en ASCII puro (4 scripts, verificado byte a byte) |
 | AC12 | R1 | T09 | pending | Gate: exige reiniciar `server01` (ver Notas) |
 | AC13 | R6 | T06 | done | 5 fallos desde la misma IP → **HTTP 429** `Too many failed authentication attempts.` (`ban-max-invalid-attempts: 5`, `ban-address-duration: 300000`) |
 
@@ -235,6 +235,33 @@ Es decir: el ban cuenta **por IP de cliente**, no por la del proxy. Sin esto, ci
 ### Falta para cerrar T07 (AC6)
 
 El nginx del usuario publicando el dominio. Cuando esté, se verifica desde fuera y AC6 cierra.
+
+## T09 — suite smoke (2026-10-23) — `partial`
+
+`tests/smoke.mjs` (Node, sin dependencias) y `tests.commands` ya no está vacío.
+
+```
+$ node ia/tools/run-tests.mjs                 # sin entorno
+[run-tests] ok   node tests/smoke.mjs  (exit 0, 250 ms)
+TODO OK | 1 suite(s) | 0 PASS
+
+$ F001_HOST=humberto@192.168.18.70 node ia/tools/run-tests.mjs
+[run-tests] ok   node tests/smoke.mjs  (exit 0, 1504 ms)
+TODO OK | 1 suite(s) | 6 PASS
+
+$ node tests/smoke.mjs
+PASS guacd enabled + active
+PASS guacamole-tomcat enabled + active
+PASS cluster PostgreSQL online en 5434
+PASS 4822 / 5434 / 8081 solo en loopback
+PASS 443 escuchando (backend de Apache)
+PASS https://127.0.0.1/guacamole/ responde 200
+SKIP URL publica (F001_PUBLIC_URL no definida)
+```
+
+- **Los dos caminos probados:** con `F001_HOST` comprueba de verdad; sin él sale SKIP con **exit 0**, así que no puede dejar en rojo el harness de un clon sin acceso al host.
+- **AC11 verificado:** los cuatro `ops/*.sh` están en ASCII puro y sin CRLF (comprobado byte a byte, no con `grep`).
+- **Falta:** AC12 (reinicio, gate con ventana acordada) y la rama pública, que necesita `F001_PUBLIC_URL` y por tanto AC6.
 
 ## Notas de ejecución
 
