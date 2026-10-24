@@ -51,6 +51,8 @@ Ejecutado con `sudo bash ops/70-branding.sh` (las fuentes se suben junto al scri
 
 **Corrección del primer intento (2026-10-24):** la primera versión pintaba `html, body` de navy, y eso dejó **toda la aplicación** con fondo oscuro y texto oscuro: la lista de conexiones quedó ilegible (lo reportó el usuario con captura). El navy se limita ahora a `.login-ui`; la app va sobre `gray-050` con texto `ink-900`, y `body.client` se deja en negro para las sesiones. Lección para el CSS del branding: **el fondo global no se toca; se pinta la vista, no el documento.**
 
+**Caché del CSS (2026-10-24):** Guacamole sirve los estilos como `app.css?b=<build>`, y ese identificador **no cambia** al editar la extensión, así que el navegador seguía usando el CSS anterior aunque el servidor ya tuviera el nuevo. Se agregó al vhost `Cache-Control: no-cache, must-revalidate` para `/desktop/*.css`. Verificado con `curl -I`: la cabecera llega. Sin esto, cada ajuste de branding se ve "igual" hasta que alguien limpia la caché a mano.
+
 ## Notas de ejecución
 
 - **Nada ejecutado.** La spec está escrita y espera aprobación explícita.

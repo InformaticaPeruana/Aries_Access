@@ -103,6 +103,12 @@ cat > "${CONF}" <<EOF
 
     ErrorLog  \${APACHE_LOG_DIR}/guacamole-error.log
     CustomLog \${APACHE_LOG_DIR}/guacamole-access.log combined
+
+    # Mientras se ajusta el branding, el CSS no se cachea: Guacamole lo sirve
+    # como app.css?b=<build> y ese identificador no cambia al editar la extension.
+    <LocationMatch "^/desktop/.*\.css$">
+        Header set Cache-Control "no-cache, must-revalidate"
+    </LocationMatch>
 </VirtualHost>
 EOF
 
