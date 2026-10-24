@@ -196,6 +196,76 @@ h1, h2, h3, h4, h5, h6 {
     color: var(--aries-gray-050) !important;
 }
 
+/* ---------- Inicio: conexiones como tarjetas ---------------------------- */
+
+.home-view .connection-list-ui {
+    background: var(--aries-gray-050);
+}
+
+.home-view .header {
+    background: #ffffff;
+    border-bottom: 1px solid var(--aries-gray-200);
+    padding: .6rem 1.4rem;
+}
+
+.home-view .header h2 {
+    font-size: .76em;
+    font-weight: 600;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--aries-gray-600);
+    margin: 0;
+}
+
+.home-view .all-connections,
+.home-view guac-recent-connections {
+    padding: .4rem .9rem;
+}
+
+/* Cada conexion, una tarjeta. inline-flex para no depender de si el contenedor
+ * es un div o una lista. */
+.home-view a.home-connection {
+    display: inline-flex;
+    align-items: center;
+    gap: .8rem;
+    width: 17rem;
+    margin: .5rem;
+    padding: .9rem 1rem;
+    background: #ffffff;
+    border: 1px solid var(--aries-gray-200);
+    border-top: 3px solid var(--aries-amber-500);
+    border-radius: .45rem;
+    color: var(--aries-navy-900) !important;
+    text-decoration: none !important;
+    box-shadow: 0 1px 2px rgba(16, 24, 40, .06);
+    transition: box-shadow .15s ease, transform .15s ease;
+}
+
+.home-view a.home-connection:hover {
+    box-shadow: 0 8px 20px rgba(16, 24, 40, .14);
+    transform: translateY(-1px);
+}
+
+.home-view a.home-connection .name {
+    font-weight: 600;
+    font-size: .95em;
+}
+
+.home-view a.home-connection .icon.type {
+    flex: 0 0 auto;
+    width: 2rem;
+    height: 2rem;
+    border-radius: .3rem;
+    background-color: var(--aries-gray-050);
+}
+
+.home-view a.home-connection .activeUserCount {
+    display: block;
+    margin-left: auto;
+    font-size: .75em;
+    color: var(--aries-gray-600);
+}
+
 /* ---------- Datos tecnicos --------------------------------------------- */
 
 .connection-id,
