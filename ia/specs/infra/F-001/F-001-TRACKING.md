@@ -329,6 +329,16 @@ humberto  -> READ
 1. **Las credenciales del guest quedan EN CLARO en la base.** `select parameter_value ... where parameter_name='password'` devuelve el valor tal cual. La spec, la arquitectura y esta tarea afirmaban que iban cifradas con la clave de la base: era **falso** y quedó corregido en los tres sitios. Lo que protege es que PostgreSQL solo escucha en loopback y tiene su propia contraseña; el disco no está cifrado. Va a [`../../../BACKLOG.md`](../../../BACKLOG.md).
 2. **El endpoint `PATCH /connections/{id}/permissions` devuelve 404** en 1.6.0. El permiso se concedió en `guacamole_connection_permission` (equivale a lo que hace la UI). Para la próxima, la ruta soportada es `PATCH /users/{usuario}/permissions` con `/connectionPermissions/{id}`.
 
+### Dos fallos de conexión, con su causa en el log de `guacd`
+
+```
+RDP server closed/refused connection: Security negotiation failed (wrong security type?)
+FreeRDP initialization may fail: home directory ("/usr/sbin") is not writable
+```
+
+1. **`security=nla` forzado no negocia con esta VM.** Se cambió a **`any`** (negociación automática). El error de Guacamole es el genérico *"Connection failed"*; el motivo real **solo** aparece en `journalctl -u guacd`.
+2. **`guacd` corría sin `HOME` escribible** (`/usr/sbin`). FreeRDP guarda ahí configuración y certificados, y sin eso la negociación puede fallar. Se añadió `Environment=HOME=/var/lib/guacd` a la unidad (y a `ops/10-guacd.sh`). Verificado: `HOME=/var/lib/guacd` en `/proc/<pid>/environ`.
+
 **Falta para cerrar T08:** que el usuario abra la conexión en el navegador (AC7) y confirme el portapapeles y la unidad `Guacamole` en el guest (AC8).
 
 ## Notas de ejecución

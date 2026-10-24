@@ -38,7 +38,7 @@ Cierra con las tres comprobaciones sobre **la VM real**, encendida en el ESXi.
 
 ## Notas
 
-- ParÃ¡metros: `hostname` = IP fija de la VM, **NLA activado**, **`ignore-cert=true`** (el guest usa certificado autofirmado), `enable-drive`, `drive-name=Guacamole`, **`drive-path=/var/lib/guacd/drive`**, **`create-drive-path=true`**, y el portapapeles en los dos sentidos (**`disable-copy=false`**, **`disable-paste=false`**; no existe un `enable-clipboard`).
+- ParÃ¡metros: `hostname` = IP fija de la VM, **`security=any`** (negociacion automatica: forzar `nla` dio `Security negotiation failed` contra esta VM), **`ignore-cert=true`** (el guest usa certificado autofirmado), `enable-drive`, `drive-name=Guacamole`, **`drive-path=/var/lib/guacd/drive`**, **`create-drive-path=true`**, y el portapapeles en los dos sentidos (**`disable-copy=false`**, **`disable-paste=false`**; no existe un `enable-clipboard`).
 - `guacd` corre como `daemon`: el directorio de la unidad tiene que ser escribible por ese usuario, o la unidad aparece vacÃ­a o no aparece.
 - **El guest tiene que estar preparado** y eso es trabajo del usuario: RDP habilitado (`fDenyTSConnections=0`), firewall con el 3389 **acotado a la IP de `server01`** (no abierto a toda la LAN) e IP fija o reserva. EstÃ¡ en [`../../CHECKLIST.md`](../../CHECKLIST.md); si no estÃ¡ hecho, esta tarea queda `blocked` por preparaciÃ³n, no por Guacamole.
 - Si el 3389 no responde desde `server01` (visto en T01), esta tarea estÃ¡ bloqueada por **red**, no por Guacamole: se para y se avisa.
