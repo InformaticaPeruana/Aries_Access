@@ -16,7 +16,7 @@ F-001 · **T08** — conexión RDP a `192.168.18.41`. **Bloqueada**: faltan las 
 
 ## Last Completed
 
-**T06 y T07 cerradas**: Guacamole publicado en `https://remoto.informaticaperuana.com/guacamole/` con Let's Encrypt, TOTP enrolado y exigido, contraseña de `humberto` rotada a una dictable, y la app PHP del host dejó de estar expuesta (`/maestro/` → 404).
+**T06 y T07 cerradas**: Guacamole publicado en `https://remoto.informaticaperuana.com/desktop/` (con `/guacamole/` → 301) y Let's Encrypt, TOTP enrolado y exigido, contraseña de `humberto` rotada a una dictable, y la app PHP del host dejó de estar expuesta (`/maestro/` → 404).
 
 ## Next
 

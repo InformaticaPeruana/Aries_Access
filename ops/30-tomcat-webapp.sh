@@ -8,7 +8,7 @@
 # 1.6.0 usa javax.servlet, asi que Tomcat 10+ no sirve.
 #
 # Deja:
-#   /opt/tomcat9                                   Tomcat 9 + webapps/guacamole.war
+#   /opt/tomcat9                                   Tomcat 9 + webapps/desktop.war (contexto /desktop/)
 #   /etc/guacamole/guacamole.properties            640 root:guacamole
 #   /etc/guacamole/extensions/                     guacamole-auth-jdbc-postgresql-1.6.0.jar
 #   /etc/guacamole/lib/                            postgresql.jar (driver JDBC)
@@ -23,7 +23,7 @@ GUAC_HOME="/etc/guacamole"
 JDBC_DIR="/var/cache/guacamole/guacamole-auth-jdbc-${GUAC_VERSION}/postgresql"
 JAVA_HOME_DIR="/usr/lib/jvm/java-17-openjdk-amd64"
 PASSFILE="/root/guacamole-db.pass"
-API="http://127.0.0.1:8081/guacamole/api/tokens"
+API="http://127.0.0.1:8081/desktop/api/tokens"
 
 export DEBIAN_FRONTEND=noninteractive
 log() { echo "== $* =="; }
@@ -131,10 +131,10 @@ if [ ! -f "${GUAC_HOME}/lib/postgresql.jar" ]; then
 fi
 
 # --- 6. webapp ---------------------------------------------------------------
-if [ ! -f "${TC_HOME}/webapps/guacamole.war" ]; then
+if [ ! -f "${TC_HOME}/webapps/desktop.war" ]; then
   log "desplegando guacamole-${GUAC_VERSION}.war"
-  curl -fsS -o "${TC_HOME}/webapps/guacamole.war" "${GUAC_URL}"
-  chown "${TC_USER}:${TC_USER}" "${TC_HOME}/webapps/guacamole.war"
+  curl -fsS -o "${TC_HOME}/webapps/desktop.war" "${GUAC_URL}"
+  chown "${TC_USER}:${TC_USER}" "${TC_HOME}/webapps/desktop.war"
 fi
 
 # --- 7. unidad systemd -------------------------------------------------------
@@ -170,7 +170,7 @@ systemctl restart guacamole-tomcat
 # --- 8. esperar el despliegue y verificar ------------------------------------
 log "esperando el despliegue"
 for i in $(seq 1 60); do
-  code="$(curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:8081/guacamole/" || true)"
+  code="$(curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:8081/desktop/" || true)"
   if [ "${code}" = "200" ] || [ "${code}" = "302" ]; then
     echo "   webapp responde ${code} tras ${i}s"
     break
@@ -182,7 +182,7 @@ log "verificacion"
 systemctl is-enabled guacamole-tomcat
 systemctl is-active guacamole-tomcat
 ss -ltn | grep 8081 || { echo "ERROR: el 8081 no escucha" >&2; exit 1; }
-curl -sI http://127.0.0.1:8081/guacamole/ | head -1
+curl -sI http://127.0.0.1:8081/desktop/ | head -1
 ls -1 "${GUAC_HOME}/extensions/" "${GUAC_HOME}/lib/"
 ps -o args= -C java | grep -o -- '-Xmx[0-9]*m' || true
 

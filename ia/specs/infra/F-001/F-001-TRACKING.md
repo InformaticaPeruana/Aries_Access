@@ -32,7 +32,7 @@ Un AC, una tarea dueña ([`F-001.spec.md`](./F-001.spec.md) §Criterios de acept
 | AC3 | R5 | T04 | done | `\dt` con `guacamole_user`/`guacamole_db` lista las tablas `guacamole_*` (23) |
 | AC4 | R5 | T05 | done | `POST /api/tokens` → `authToken` con `dataSource: postgresql` |
 | AC5 | R6 | T06 | done | 1/3 `guacadmin`/`guacadmin` → `Invalid login`. 2/3 `humberto` + contraseña → `TOTP.INFO_CODE_REQUIRED` (enrolado). 3/3 código inválido → `TOTP.INFO_VERIFICATION_FAILED` |
-| AC6 | R4 | T07 | done | `https://remoto.informaticaperuana.com/guacamole/` → **200**, emisor **Let's Encrypt (YE1)**, `ssl_verify_result=0`, vence 2027-01-21, cuerpo = login de Guacamole |
+| AC6 | R4 | T07 | done | `https://remoto.informaticaperuana.com/desktop/` → **200**, emisor **Let's Encrypt (YE1)**, `ssl_verify_result=0`, vence 2027-01-21, cuerpo = login. `/guacamole/` → **301**. `/maestro/` → 404 |
 | AC7 | R7 | T08 | pending | — |
 | AC8 | R7 | T08 | pending | — |
 | AC9 | R2 | T05 | done | guacd 1.6.0 · webapp 1.6.0 (`pom.properties`) · extensión 1.6.0 · driver 42.7.2 · Tomcat 9.0.123 (JVM built 21, corre en Java 17) |

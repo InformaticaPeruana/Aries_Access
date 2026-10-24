@@ -5,7 +5,7 @@
 //
 // Variables de entorno (ninguna se versiona):
 //   F001_HOST        host SSH, p.ej. humberto@192.168.18.70. Sin esto -> SKIP.
-//   F001_PUBLIC_URL  URL publica, p.ej. https://acceso.ejemplo.com/guacamole/
+//   F001_PUBLIC_URL  URL publica, p.ej. https://remoto.informaticaperuana.com/desktop/
 //                    Sin esto, esa comprobacion se salta.
 //
 // Contrato con run-tests.mjs: imprime PASS/FAIL/SKIP por caso y devuelve 0.
@@ -31,7 +31,7 @@ r() { printf 'RESULT %s\\n' "$1"; }
 printf 'GUACD=%s\\n'  "$(systemctl is-enabled guacd 2>/dev/null)/$(systemctl is-active guacd 2>/dev/null)"
 printf 'TOMCAT=%s\\n' "$(systemctl is-enabled guacamole-tomcat 2>/dev/null)/$(systemctl is-active guacamole-tomcat 2>/dev/null)"
 printf 'PG=%s\\n'     "$(pg_lsclusters -h 2>/dev/null | awk '$2=="guacamole" {print $4"/"$3}')"
-printf 'HTTP=%s\\n'   "$(curl -sk -o /dev/null -w '%{http_code}' https://127.0.0.1/guacamole/ 2>/dev/null)"
+printf 'HTTP=%s\\n'   "$(curl -sk -o /dev/null -w '%{http_code}' https://127.0.0.1/desktop/ 2>/dev/null)"
 ss -ltn 2>/dev/null | awk 'NR>1 {print "LISTEN " $4}'
 `;
 
@@ -86,7 +86,7 @@ function checkLocal() {
     : fail('el 443 no escucha');
 
   get('HTTP') === '200'
-    ? pass('https://127.0.0.1/guacamole/ responde 200')
+    ? pass('https://127.0.0.1/desktop/ responde 200')
     : fail(`https local responde ${get('HTTP') || 'sin respuesta'}`);
 }
 

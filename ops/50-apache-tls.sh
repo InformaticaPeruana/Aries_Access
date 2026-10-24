@@ -3,8 +3,8 @@
 #
 # Topologia (DEC-0027):
 #   Internet -> nginx del usuario (192.168.18.203, TLS publico)
-#            -> https://192.168.18.70/guacamole/  (este script, certificado propio)
-#            -> http://127.0.0.1:8081/guacamole/  (Tomcat, sigue en loopback)
+#            -> https://192.168.18.70/desktop/  (este script, certificado propio)
+#            -> http://127.0.0.1:8081/desktop/  (Tomcat, sigue en loopback)
 #
 # El 443 de este host solo acepta al nginx (192.168.18.203) y a si mismo.
 # No toca 000-default ni ningun otro vhost.
@@ -74,12 +74,13 @@ cat > "${CONF}" <<EOF
         Require ip ${NGINX_IP} 127.0.0.1
     </Location>
 
-    # Sin barra final Guacamole no resuelve (Tomcat da 404): se redirige.
-    RedirectMatch 301 ^/guacamole$ /guacamole/
-    # La raiz tambien lleva al login; el resto de rutas no existe en este vhost.
-    RedirectMatch 302 ^/$ /guacamole/
+    # El contexto publicado es /desktop/. Los enlaces viejos a /guacamole/
+    # se redirigen para no romper nada.
+    RedirectMatch 301 ^/guacamole/?$ /desktop/
+    RedirectMatch 301 ^/guacamole/(.*)$ /desktop/\$1
+    RedirectMatch 302 ^/$ /desktop/
 
-    # Solo /guacamole/ existe en este vhost. Sin un DocumentRoot util, cualquier
+    # Solo /desktop/ existe en este vhost. Sin un DocumentRoot util, cualquier
     # otra ruta (por ejemplo /maestro/, que es una app PHP del host) da 404 en
     # vez de exponerse a traves del proxy publico.
     DocumentRoot /var/www/guacamole-vhost-vacio
@@ -91,13 +92,13 @@ cat > "${CONF}" <<EOF
     # y Tomcat (RemoteIpValve) se queda con la IP real del cliente.
     ProxyPreserveHost On
     RequestHeader set X-Forwarded-Proto "https"
-    ProxyPass        /guacamole/ http://127.0.0.1:${GUAC_PORT}/guacamole/
-    ProxyPassReverse /guacamole/ http://127.0.0.1:${GUAC_PORT}/guacamole/
+    ProxyPass        /desktop/ http://127.0.0.1:${GUAC_PORT}/desktop/
+    ProxyPassReverse /desktop/ http://127.0.0.1:${GUAC_PORT}/desktop/
 
     # WebSocket: sin esto el escritorio no arranca
     RewriteEngine On
     RewriteCond %{HTTP:Upgrade} =websocket [NC]
-    RewriteRule ^/guacamole/(.*) ws://127.0.0.1:${GUAC_PORT}/guacamole/\$1 [P,L]
+    RewriteRule ^/desktop/(.*) ws://127.0.0.1:${GUAC_PORT}/desktop/\$1 [P,L]
 
     ErrorLog  \${APACHE_LOG_DIR}/guacamole-error.log
     CustomLog \${APACHE_LOG_DIR}/guacamole-access.log combined
@@ -156,7 +157,7 @@ fi
 systemctl reload apache2
 systemctl restart guacamole-tomcat
 for i in $(seq 1 60); do
-  code="$(curl -sk -o /dev/null -w '%{http_code}' "https://127.0.0.1/guacamole/" || true)"
+  code="$(curl -sk -o /dev/null -w '%{http_code}' "https://127.0.0.1/desktop/" || true)"
   [ "${code}" = "200" ] && break
   sleep 1
 done
@@ -165,11 +166,11 @@ done
 log "verificacion"
 ss -ltn | grep ':443 ' || { echo "ERROR: el 443 no escucha" >&2; exit 1; }
 apache2ctl -S 2>&1 | grep -E "443|${SITE}" | sed 's/^/   /'
-echo "   local:  $(curl -sk -o /dev/null -w 'HTTP %{http_code}' https://127.0.0.1/guacamole/)"
-echo "   vhost:  $(curl -sk -o /dev/null -w 'HTTP %{http_code}' https://127.0.0.1/guacamole/api/tokens)"
+echo "   local:  $(curl -sk -o /dev/null -w 'HTTP %{http_code}' https://127.0.0.1/desktop/)"
+echo "   vhost:  $(curl -sk -o /dev/null -w 'HTTP %{http_code}' https://127.0.0.1/desktop/api/tokens)"
 
 log "cadena de IP (que la cabecera llegue a Tomcat)"
-curl -sk -o /dev/null -H "X-Forwarded-For: 203.0.113.9" "https://127.0.0.1/guacamole/"
+curl -sk -o /dev/null -H "X-Forwarded-For: 203.0.113.9" "https://127.0.0.1/desktop/"
 LAST_LOG=""
 for i in 1 2 3 4 5; do
   sleep 2
