@@ -1,0 +1,125 @@
+/* F-002 T01 - Identidad visual de Aries Access Infrastructure.
+ *
+ * Tokens de la paleta (spec F-002 §Paleta). Los hexadecimales son la propuesta
+ * derivada de la descripcion del usuario: si aparece el manual de marca, se
+ * cambian aca y en ningun otro sitio.
+ *
+ * Selectores tomados del build desplegado (guacamole 1.6.0): .login-ui,
+ * .login-dialog, .login-fields, .login-error, .button, .header.
+ */
+
+:root {
+    --aries-navy-900: #0B1F33;
+    --aries-navy-700: #12304D;
+
+    --aries-amber-500: #F0A32E;
+    --aries-amber-600: #D98E22;
+
+    --aries-gray-050: #F5F7F9;
+    --aries-gray-200: #E2E7EC;
+    --aries-gray-600: #5B6B7C;
+
+    --aries-ink-900: #16212E;
+
+    /* Semanticos: solo estado, nunca decoracion. */
+    --aries-success: #2E7D5B;
+    --aries-warning: #B26A00;
+    --aries-danger: #B42318;
+    --aries-info: #2F6FA8;
+
+    --aries-mono: ui-monospace, "JetBrains Mono", "Cascadia Mono", monospace;
+}
+
+/* ---------- Login ------------------------------------------------------- */
+
+html,
+body {
+    background: var(--aries-navy-900) !important;
+}
+
+.login-ui {
+    min-height: 100vh;
+    background:
+        radial-gradient(1100px 520px at 50% -15%, var(--aries-navy-700), var(--aries-navy-900) 70%) !important;
+}
+
+.login-ui .login-dialog {
+    background: #ffffff !important;
+    color: var(--aries-ink-900);
+    border-top: 4px solid var(--aries-amber-500) !important;
+    border-radius: .45em;
+    box-shadow: 0 18px 44px rgba(0, 0, 0, .38);
+}
+
+.login-ui .login-dialog h1 {
+    color: var(--aries-navy-900) !important;
+    font-weight: 600;
+    letter-spacing: .01em;
+}
+
+.login-ui .login-dialog th {
+    color: var(--aries-gray-600);
+    text-shadow: none !important;
+    font-weight: 500;
+}
+
+.login-ui input {
+    border: 1px solid var(--aries-gray-200);
+    border-radius: .25em;
+    padding: .45em .6em;
+    color: var(--aries-ink-900);
+}
+
+.login-ui input:focus {
+    outline: 2px solid var(--aries-amber-500);
+    outline-offset: 1px;
+}
+
+.login-ui .button {
+    background: var(--aries-gray-050) !important;
+    border: 1px solid var(--aries-gray-200) !important;
+    color: var(--aries-navy-900) !important;
+    border-radius: .25em;
+    font-weight: 500;
+}
+
+.login-ui .button:hover {
+    background: var(--aries-gray-200) !important;
+    text-decoration: none !important;
+}
+
+/* La accion principal del login: amber. */
+.login-ui .login-dialog .buttons .button:last-child {
+    background: var(--aries-amber-500) !important;
+    border-color: var(--aries-amber-600) !important;
+    color: #1A1200 !important;
+    font-weight: 600;
+}
+
+.login-ui .login-dialog .buttons .button:last-child:hover {
+    background: var(--aries-amber-600) !important;
+}
+
+.login-ui .login-error {
+    color: var(--aries-danger) !important;
+}
+
+/* ---------- Carcasa de la aplicacion ----------------------------------- */
+
+.header {
+    background: var(--aries-navy-900) !important;
+    color: var(--aries-gray-050) !important;
+}
+
+.header a,
+.header h2,
+.header .connection-select-menu {
+    color: var(--aries-gray-050) !important;
+}
+
+/* IPs, identificadores y cifras en monoespaciada. */
+.connection-id,
+.connection-identifier,
+.client-identifier {
+    font-family: var(--aries-mono);
+}

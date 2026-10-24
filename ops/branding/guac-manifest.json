@@ -1,0 +1,7 @@
+{
+  "guacamoleVersion": "1.6.0",
+  "name": "Aries Access Branding",
+  "namespace": "aries",
+  "css": ["css/aries.css"],
+  "translations": ["translations/en.json", "translations/es.json"]
+}
