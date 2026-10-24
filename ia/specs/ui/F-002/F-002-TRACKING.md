@@ -67,7 +67,7 @@ Ejecutado con `sudo bash ops/70-branding.sh` (las fuentes se suben junto al scri
 
 **Decisión del usuario:** la **raíz va directo a `/desktop/`**, sin landing de por medio. La portada existe y funciona en `/portal/`, pero no intercepta la entrada; si más adelante la quieren como cara del servicio, es cambiar un `RedirectMatch`.
 
-Cada tarjeta enlaza a su conexión con el identificador real de Guacamole: **base64url sin relleno de `id,type,dataSource`** (p. ej. `1,c,postgresql` → `MSxjLHBvc3RncmVzcWw`). El primer intento usó base64 de un JSON y no abría nada; el formato se sacó del propio bundle (`ClientIdentifier.toString` en `guacamole.*.js`), no de memoria. Si una versión futura lo cambia, el enlace cae en el listado, no en un error.
+**Los enlaces directos por conexión NO son fiables y se descartaron.** Se probaron dos formatos: base64 de un JSON (inventado) y el real —**base64url sin relleno de `id,type,dataSource`**, p. ej. `1,c,postgresql` → `MSxjLHBvc3RncmVzcWw`—, confirmado contra la API (`identifier` = `1` y `2`) y contra `ClientIdentifier.toString` del bundle. Con el formato correcto, la carga en frío de `/desktop/#/client/…` **vuelve al listado en silencio**: `clientController` resuelve la ruta antes de que la lista de conexiones esté cargada. Los botones apuntan a `/desktop/`, que es el camino que funciona siempre, y la portada lo dice.
 
 ## Notas de ejecución
 
