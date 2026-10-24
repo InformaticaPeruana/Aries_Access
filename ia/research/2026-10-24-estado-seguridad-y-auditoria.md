@@ -68,7 +68,15 @@ El portal está publicado con **HTTPS de CA pública**, autenticación **usuario
 
 **Hoy:** se registra el **metadato** de cada acceso — usuario, conexión, IP de origen, inicio, fin y duración — en `guacamole_connection_history`, y cada autenticación en `guacamole_user_history`. Consultable en la UI (**Ajustes → Sesiones activas** e **Historial de uso**) y exportable a CSV.
 
-**Grabación: implementada desde el 2026-10-24** con **retención de 7 días**. Se activa por conexión (`recording-path`, `create-recording-path`, `recording-name=${HISTORY_UUID}`) y se reproduce desde la UI. **No es video**: Guacamole graba el protocolo de dibujo, por lo que el consumo de disco y CPU es bajo. Un timer diario (04:15) borra lo anterior a 7 días.
+**Grabación: implementada desde el 2026-10-24** con **retención de 7 días**. Se activa por conexión (`recording-path`, `create-recording-path`, `recording-name=${HISTORY_UUID}`). **No es video**: Guacamole graba el protocolo de dibujo, por lo que el consumo de disco y CPU es bajo (una sesión de 26 s ≈ 624 KB). Un timer diario (04:15) borra lo anterior a 7 días.
+
+**Limitación verificada (2026-10-24):** la **reproducción desde la propia UI no está disponible** en esta combinación. El enlace "Ver grabación" depende de un registro de actividad asociado a la sesión, y el módulo **JDBC de PostgreSQL de Guacamole 1.6.0 no almacena esos registros**: la API devuelve `logs: {}` para una sesión que sí generó archivo, y el `.jar` del módulo no conoce ninguna tabla de actividad. La grabación **se produce y se conserva**; lo que falta es el reproductor.
+
+**Alternativas para reproducir (a decidir):**
+1. **`guacenc`** (incluido en `guacamole-server`): convierte el `.guac` a **MP4**. Requiere recompilar `guacd` con `--with-guacenc` y las librerías de ffmpeg. Ventaja para auditoría: el video es portable y se puede entregar.
+2. **Página de reproducción propia** en `public/` con `guacamole-common-js` (ya presente en la webapp): reproduce el `.guac` en el navegador. Requiere exponer los archivos de grabación al servidor web, con control de acceso.
+
+Hasta entonces, la evidencia de auditoría es el **metadato** (quién, cuándo, desde dónde, a qué máquina, cuánto) más los archivos `.guac` conservados.
 
 ### 5.2 Logs, registros de acceso e intentos fallidos para SIEM
 
