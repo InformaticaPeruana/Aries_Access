@@ -341,6 +341,19 @@ FreeRDP initialization may fail: home directory ("/usr/sbin") is not writable
 
 **Falta para cerrar T08:** que el usuario abra la conexión en el navegador (AC7) y confirme el portapapeles y la unidad `Guacamole` en el guest (AC8).
 
+### Segunda conexión (2026-10-24)
+
+Con una sola conexión Guacamole entra directo, sin pantalla de elección. A pedido del usuario se agregó una segunda, para que el inicio muestre las dos:
+
+| id | Nombre | Destino | Usuario |
+|---|---|---|---|
+| 1 | `Escritorio joseph (192.168.18.75)` | `192.168.18.75` | `joseph` |
+| 2 | `Escritorio usuario (192.168.18.41)` | `192.168.18.41` | `usuario` |
+
+Mismos parámetros en ambas: `security=any`, `ignore-cert=true`, unidad `Guacamole`, portapapeles habilitado. `humberto` tiene `READ` en las dos.
+
+Detalle operativo: con TOTP activo el login por API no sirve, así que la segunda conexión se creó por SQL (`guacamole_connection` + `guacamole_connection_parameter` + `guacamole_connection_permission`). Ojo con `psql -tAc` en un `insert ... returning`: imprime también el tag `INSERT 0 1`, hay que quedarse con la primera línea.
+
 ## Notas de ejecución
 
 - **Spec aprobada el 2026-10-21.** T01 ejecutada el 2026-10-21 21:25 (`partial`): el host quedó verificado y el resultado **corrige tres supuestos** del plan (no hace falta liberar disco, el proxy es Apache y Tomcat 9 no está en los repos). Falta la lista de IPs de las VMs y la prueba del 3389.
