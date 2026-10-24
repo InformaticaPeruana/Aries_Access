@@ -343,9 +343,7 @@ FreeRDP initialization may fail: home directory ("/usr/sbin") is not writable
 
 **Falta para cerrar T08:** que el usuario abra la conexión en el navegador (AC7) y confirme el portapapeles y la unidad `Guacamole` en el guest (AC8).
 
-### Segunda conexión (2026-10-24)
-
-Con una sola conexión Guacamole entra directo, sin pantalla de elección. A pedido del usuario se agregó una segunda, para que el inicio muestre las dos:
+### Segunda conexión (2026-10-24)Con una sola conexión Guacamole entra directo, sin pantalla de elección. A pedido del usuario se agregó una segunda, para que el inicio muestre las dos:
 
 | id | Nombre | Destino | Usuario |
 |---|---|---|---|
@@ -355,6 +353,11 @@ Con una sola conexión Guacamole entra directo, sin pantalla de elección. A ped
 Mismos parámetros en ambas: `security=any`, `ignore-cert=true`, unidad `Guacamole`, portapapeles habilitado. `humberto` tiene `READ` en las dos.
 
 Detalle operativo: con TOTP activo el login por API no sirve, así que la segunda conexión se creó por SQL (`guacamole_connection` + `guacamole_connection_parameter` + `guacamole_connection_permission`). Ojo con `psql -tAc` en un `insert ... returning`: imprime también el tag `INSERT 0 1`, hay que quedarse con la primera línea.
+
+### Transferencia de archivos apagada y alcance del RDP (2026-10-24)
+
+- **`enable-drive=false`** en las dos conexiones, a pedido del usuario ("no deberíamos permitir la transferencia de archivos por ahora"). La unidad `Guacamole` deja de aparecer en los guests. El portapapeles **sigue activo** (no es transferencia de archivos): si también hay que apagarlo, son dos parámetros (`disable-copy`/`disable-paste`).
+- **Medición del alcance RDP:** desde `192.168.18.41`, `192.168.18.75:3389` responde **ABIERTO**. Es decir, **cualquier equipo de la LAN puede atacar RDP directo**, sin pasar por Guacamole, y el firewall de esos guests no está acotado a `server01`. `server01:3389` está cerrado ✓. Es el hallazgo que motiva el endurecimiento de red (ver [`../../../BACKLOG.md`](../../../BACKLOG.md)).
 
 ## Notas de ejecución
 

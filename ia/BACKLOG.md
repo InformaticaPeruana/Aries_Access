@@ -16,6 +16,7 @@ Lista compacta. No es documentación extensa y no lleva justificaciones largas: 
 
 ## P0 — Bloquea
 
+* [ ] **RDP abierto a toda la LAN**: desde `192.168.18.41` el `3389` de `192.168.18.75` responde. Acotar el firewall de cada guest a `192.168.18.70` y, si se puede, separar las VMs en una VLAN (feature: F-003, owner: usuario)
 * [ ] Reserva de DHCP para `server01` — con IP dinámica, el vhost y el certificado se rompen solos (feature: F-001, owner: usuario)
 
 ## P1 — Importante
