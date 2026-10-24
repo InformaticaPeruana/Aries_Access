@@ -2,6 +2,8 @@
   "guacamoleVersion": "1.6.0",
   "name": "Aries Access Branding",
   "namespace": "aries",
+  "smallIcon": "images/icon-a-64.png",
+  "largeIcon": "images/icon-a-144.png",
   "css": ["css/aries.css"],
   "translations": ["translations/en.json", "translations/es.json"]
 }
