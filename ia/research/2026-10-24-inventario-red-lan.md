@@ -38,38 +38,30 @@
 | R5 | **`server01:3306` (MySQL del host)** | 1 host | No lo usa el portal; podría escuchar solo en loopback |
 | R6 | **Red plana sin segmentación** | Toda la /24 | No hay separación entre servidores, escritorios, usuarios e invitados: un compromiso en cualquier equipo da acceso al resto |
 
-## 3. Diseño objetivo (tres segmentos)
+## 3. Diseño objetivo: **sin VLAN posible** → control compensatorio
+
+**Restricción confirmada por el responsable (2026-10-24):** el switch/router **no soporta VLAN (802.1Q)** y **no hay WiFi de invitados**; todas las máquinas de la tabla son de **personal**.
+
+Por lo tanto no hay segmentación por red disponible. En una red plana, el control equivalente es **firewall por equipo**, con el portal como único camino de administración:
 
 ```
-                    ┌──────────────────────────┐
-   Internet ──443──►│ VLAN 10 · SERVIDORES     │
-                    │  .70 server01            │
-                    │  .203 nginx (NPM)        │
-                    │  .68 .80 .204 (Linux)    │
-                    └───────────┬──────────────┘
-                                │ 3389 solo desde .70
-                    ┌───────────▼──────────────┐
-                    │ VLAN 20 · ESCRITORIOS    │
-                    │  .8 .9 .13 .15 .17 .41   │
-                    │  .53 .63 .64 .75         │
-                    └───────────▲──────────────┘
-                                │ denegado (salvo 443 al portal)
-                    ┌───────────┴──────────────┐
-                    │ VLAN 30 · USUARIOS/WIFI  │
-                    │  puestos + invitados     │
-                    └──────────────────────────┘
+Internet ──443──► nginx (.203) ──443──► server01 (.70) ──► guacd ──3389──► VMs
+                                              ▲
+             cada Windows: 3389 SOLO desde .70 ─┘
+             (reglas de "Escritorio remoto" acotadas)
 ```
 
-**Matriz de acceso (lo que se permite; todo lo demás se deniega):**
+**Modelo de confianza:** no hay invitados; el riesgo residual es un **equipo de personal comprometido** (ransomware, phishing) que intente moverse lateralmente. Contra eso:
 
-| Origen → Destino | VLAN 10 (servidores) | VLAN 20 (escritorios) | VLAN 30 (usuarios/invitados) |
-|---|---|---|---|
-| **VLAN 10** | según servicio | **3389 solo desde `.70`** | — |
-| **VLAN 20** | — | — | — |
-| **VLAN 30** | **443 solo a `.203`** | — | — |
-| **Invitados** | **443 a `.203`** | — | — |
+| Control | Alcance | Estado |
+|---|---|---|
+| RDP acotado a `.70` en cada Windows | Todos los equipos con RDP | **Pendiente de ejecutar** (`ops/windows/rdp-firewall.ps1`) |
+| SMB acotado (opcional) | Equipos que no comparten carpetas | Opcional, con `-AlsoRestrictSmb` |
+| MySQL en `127.0.0.1` | Instancias que no sirven a la LAN | Recomendado, por equipo |
+| `server01`: servicios de Docker a loopback | R4/R5 del inventario | Fuera del alcance del portal; decisión del responsable |
 
-Consecuencia buscada: el **único** camino a un escritorio es `nginx → server01 → guacd → 3389`. Un invitado no puede ver un 3389 ni un 445 ni un 3306.
+**Riesgo residual aceptado:** sin VLAN, un equipo comprometido sigue pudiendo alcanzar servicios que otros equipos expongan a propósito (por ejemplo, un MySQL que necesite la LAN). Se mitiga con el firewall de cada host, no con la red. Queda registrado como tal para la auditoría.
+
 
 ## 4. Mitigación inmediata (sin tocar la red)
 
@@ -87,10 +79,11 @@ Se puede hacer hoy y elimina el 90% del riesgo de R1:
 
 ## 5. Preguntas abiertas para cerrar el diseño
 
-1. ¿La **WiFi de invitados** comparte la `192.168.18.0/24`? Si es así, hoy un visitante alcanza los 8 RDP: es el escenario que hay que cortar primero.
-2. ¿El **switch/router admite VLAN** (802.1Q)? Sin eso, la segmentación se resuelve con un firewall entre subredes, no con VLANs.
-3. ¿Quién administra el router (`192.168.18.1`)? Los cambios de segmentación son ahí.
-4. ¿Los equipos `.8, .13, .15, .17, .53, .63, .64` son de producción? Definir si alguno debe seguir exponiendo RDP/MySQL a la LAN o también pasa por el portal.
+1. ~~¿WiFi de invitados en la misma /24?~~ **No hay WiFi de invitados** (2026-10-24). El vector "visitante" queda descartado; el riesgo es un equipo de personal comprometido.
+2. ~~¿El switch soporta VLAN?~~ **No soporta 802.1Q** (2026-10-24). No hay segmentación por red; el control es el firewall de cada equipo.
+3. ~~¿Quién administra el router?~~ Sin cambios de segmentación posibles, el router no es el punto de control.
+4. **¿Los equipos `.8, .13, .15, .17, .53, .63, .64` necesitan exponer RDP/MySQL a la LAN?** Son de personal: si nadie más que `server01` debe abrirles RDP, se acotan con `ops/windows/rdp-firewall.ps1`.
+5. **¿Alguna de esas máquinas comparte carpetas por SMB?** Si no, conviene `-AlsoRestrictSmb`.
 
 ## Relacionados
 
