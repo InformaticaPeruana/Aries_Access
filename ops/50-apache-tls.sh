@@ -74,6 +74,15 @@ cat > "${CONF}" <<EOF
         Require ip ${NGINX_IP} 127.0.0.1
     </Location>
 
+    # La portada propia vive en /portal/, pero la raiz va DIRECTO a Guacamole:
+    # el usuario pidio no pasar por una landing.
+    Alias /portal/ /var/www/aries-portal/
+    <Directory /var/www/aries-portal>
+        Options -Indexes
+        Require ip ${NGINX_IP} 127.0.0.1
+    </Directory>
+    RedirectMatch 301 ^/portal$ /portal/
+
     # El contexto publicado es /desktop/. Los enlaces viejos a /guacamole/
     # se redirigen para no romper nada. Sin barra final Tomcat da 404.
     RedirectMatch 301 ^/desktop$ /desktop/
