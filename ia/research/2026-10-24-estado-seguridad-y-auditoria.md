@@ -188,6 +188,42 @@ powershell -c "Test-NetConnection 192.168.18.75 -Port 3389"   # TcpTestSucceeded
 
 ---
 
+## 9. Guion para la reunión con el auditor (lunes 2026-10-27)
+
+Textos listos para decir o citar. Cada afirmación tiene su evidencia en §3 y §7.
+
+**Alcance y estado general**
+> "El portal de acceso remoto está en producción desde el 24 de octubre, con autenticación multifactor, TLS de CA pública, registro de accesos y transferencia de archivos deshabilitada. Tenemos identificadas cinco brechas con plan y coste; ninguna afecta la autenticación del portal."
+
+**Autenticación y control de acceso**
+> "Se accede con usuario nominal, contraseña y segundo factor TOTP. La cuenta administrativa por defecto fue rotada a una contraseña aleatoria custodiada fuera del sistema. Hay un solo usuario humano, con permisos de administración y auditoría separados del usuario de rescate."
+
+**Límite de intentos y fuerza bruta**
+> "Tras cinco intentos fallidos desde una misma IP, el acceso se bloquea durante cinco minutos. El conteo usa la IP real del cliente, no la del proxy; lo verificamos con dos IPs simultáneas: una bloqueada y otra no."
+
+**Trazabilidad**
+> "Cada acceso queda registrado con usuario, máquina, IP de origen, inicio, fin y duración, consultable y exportable a CSV. Los intentos fallidos y los bloqueos quedan en el registro del servidor de aplicaciones, con la IP real detrás del proxy."
+
+**Grabación de sesiones**
+> "Las sesiones se graban y se conservan siete días, con borrado automático. La reproducción integrada en la interfaz no está disponible con el backend actual —limitación verificada del módulo de base de datos de Guacamole 1.6.0—; la evidencia se entrega como video MP4 convertido desde la grabación original, y el metadato del acceso queda igualmente registrado."
+
+**Monitoreo y alertas**
+> "Un colector revisa cada cinco minutos los accesos y los intentos fallidos. Genera un registro estructurado en formato JSONL y envía alerta por correo cuando detecta cinco o más fallos en quince minutos desde una IP, o un acceso fuera del horario laboral: lunes a viernes de 8:00 a 20:00 y sábados de 8:00 a 15:00, hora de Lima. El envío está probado con eventos reales."
+
+**Transferencia de archivos**
+> "Deshabilitada por decisión del negocio el 24 de octubre. El portapapeles de texto sigue habilitado y es un control distinto; si el criterio lo incluye, se desactiva con dos parámetros."
+
+**Red y RDP**
+> "La red es plana y el conmutador no soporta segmentación por VLAN, así que el control es por equipo: las reglas de Escritorio Remoto se acotan para aceptar RDP únicamente desde el servidor del portal. El portal no expone RDP en ningún caso. Queda un riesgo residual declarado: sin segmentación, un equipo comprometido podría alcanzar servicios que otros equipos expongan deliberadamente."
+
+**Brechas abiertas y plan**
+> "Quedan abiertas: ejecutar el firewall en cada equipo, el cifrado de credenciales en reposo, y una política de caducidad de contraseñas. La grabación y las alertas quedaron cerradas hoy. El cierre de las restantes es la siguiente iteración, priorizada por riesgo."
+
+**Lo que no vamos a afirmar**
+- Que existe una política documentada de seguridad: los controles técnicos están, la documentación formal es trabajo pendiente.
+- Que la red está segmentada: no lo está, y hay un control compensatorio.
+- Que la reproducción de grabaciones está integrada en la interfaz: no lo está.
+
 ## Relacionados
 
 - Feature del portal: [`../specs/infra/F-001/F-001.spec.md`](../specs/infra/F-001/F-001.spec.md) · Identidad visual: [`../specs/ui/F-002/F-002.spec.md`](../specs/ui/F-002/F-002.spec.md)
