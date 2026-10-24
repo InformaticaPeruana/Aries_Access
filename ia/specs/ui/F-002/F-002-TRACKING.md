@@ -67,7 +67,7 @@ Ejecutado con `sudo bash ops/70-branding.sh` (las fuentes se suben junto al scri
 
 **Decisión del usuario:** la **raíz va directo a `/desktop/`**, sin landing de por medio. La portada existe y funciona en `/portal/`, pero no intercepta la entrada; si más adelante la quieren como cara del servicio, es cambiar un `RedirectMatch`.
 
-Cada tarjeta enlaza a su conexión con el identificador que usa Guacamole en la URL (`/desktop/#/client/<base64 de {"type":"c","id":"N"}>`). Si ese formato cambiara en una versión futura, el enlace cae en el listado de conexiones, no en un error: la propia portada lo dice.
+Cada tarjeta enlaza a su conexión con el identificador real de Guacamole: **base64url sin relleno de `id,type,dataSource`** (p. ej. `1,c,postgresql` → `MSxjLHBvc3RncmVzcWw`). El primer intento usó base64 de un JSON y no abría nada; el formato se sacó del propio bundle (`ClientIdentifier.toString` en `guacamole.*.js`), no de memoria. Si una versión futura lo cambia, el enlace cae en el listado, no en un error.
 
 ## Notas de ejecución
 
