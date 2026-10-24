@@ -75,7 +75,8 @@ cat > "${CONF}" <<EOF
     </Location>
 
     # El contexto publicado es /desktop/. Los enlaces viejos a /guacamole/
-    # se redirigen para no romper nada.
+    # se redirigen para no romper nada. Sin barra final Tomcat da 404.
+    RedirectMatch 301 ^/desktop$ /desktop/
     RedirectMatch 301 ^/guacamole/?$ /desktop/
     RedirectMatch 301 ^/guacamole/(.*)$ /desktop/\$1
     RedirectMatch 302 ^/$ /desktop/
