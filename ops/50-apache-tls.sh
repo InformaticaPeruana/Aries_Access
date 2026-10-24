@@ -74,6 +74,19 @@ cat > "${CONF}" <<EOF
         Require ip ${NGINX_IP} 127.0.0.1
     </Location>
 
+    # Sin barra final Guacamole no resuelve (Tomcat da 404): se redirige.
+    RedirectMatch 301 ^/guacamole$ /guacamole/
+    # La raiz tambien lleva al login; el resto de rutas no existe en este vhost.
+    RedirectMatch 302 ^/$ /guacamole/
+
+    # Solo /guacamole/ existe en este vhost. Sin un DocumentRoot util, cualquier
+    # otra ruta (por ejemplo /maestro/, que es una app PHP del host) da 404 en
+    # vez de exponerse a traves del proxy publico.
+    DocumentRoot /var/www/guacamole-vhost-vacio
+    <Directory /var/www/guacamole-vhost-vacio>
+        Require all denied
+    </Directory>
+
     # El nginx manda X-Forwarded-For; mod_proxy le agrega su par (${NGINX_IP}),
     # y Tomcat (RemoteIpValve) se queda con la IP real del cliente.
     ProxyPreserveHost On
@@ -157,8 +170,12 @@ echo "   vhost:  $(curl -sk -o /dev/null -w 'HTTP %{http_code}' https://127.0.0.
 
 log "cadena de IP (que la cabecera llegue a Tomcat)"
 curl -sk -o /dev/null -H "X-Forwarded-For: 203.0.113.9" "https://127.0.0.1/guacamole/"
-sleep 3
-LAST_LOG="$(ls -1t /opt/tomcat9/logs/localhost_access_log.*.txt 2>/dev/null | head -1)"
+LAST_LOG=""
+for i in 1 2 3 4 5; do
+  sleep 2
+  LAST_LOG="$(ls -1t /opt/tomcat9/logs/localhost_access_log.*.txt 2>/dev/null | head -1)"
+  [ -n "${LAST_LOG}" ] && grep -q 'xff=203.0.113.9' "${LAST_LOG}" && break
+done
 if [ -n "${LAST_LOG}" ] && grep -q 'xff=203.0.113.9' "${LAST_LOG}"; then
   grep 'xff=203.0.113.9' "${LAST_LOG}" | tail -n 1 | sed 's/^/   /'
   echo "   (el ban separa por la IP del cliente: comprobado en T07 con dos IPs distintas)"

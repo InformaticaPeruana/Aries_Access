@@ -16,8 +16,8 @@ Bitácora de ejecución. **Único lugar donde vive el estado de las tareas**, ju
 | [T03](../../../plans/F-001/T03-guacd.md) | `guacd` 1.6.0 como servicio | T02 | done | 2026-10-21: `guacd version 1.6.0`, `enabled`+`active`, `LISTEN 127.0.0.1:4822`, `configure` con `RDP ... yes` y `freerdp 2.x` |
 | [T04](../../../plans/F-001/T04-postgresql.md) | PostgreSQL, esquema y usuario de base | T02 | done | 2026-10-21: clúster `16/guacamole` **online en 127.0.0.1:5434**, `guacamole_db` con **23 tablas** y `guacadmin`; el 5432 de Supabase sin tocar |
 | [T05](../../../plans/F-001/T05-tomcat-webapp.md) | Tomcat 9, webapp y extensiones en `127.0.0.1:8081` | T03, T04 | done | 2026-10-21: Tomcat **9.0.123** + webapp **1.6.0**, `-Xmx512m`, extensión JDBC y driver 42.7.2; **`authToken` real** con `dataSource: postgresql` |
-| [T06](../../../plans/F-001/T06-cuentas-totp.md) | Cuentas endurecidas, TOTP y límite de intentos | T05 | partial | 2026-10-21: `guacadmin`/`guacadmin` **rechazado**, usuario `humberto` creado, TOTP instalado y **exigido** (`TOTP.INFO_ENROLL_REQUIRED`), ban con **HTTP 429** tras 5 fallos. **Falta:** enrolar el dispositivo del usuario y comprobar el código caducado (AC5 3/3) |
-| [T07](../../../plans/F-001/T07-apache-tls.md) | vhost de Apache y TLS público | T06 | partial | 2026-10-23: **lado `server01` hecho** — 443 con certificado propio, `200` por `https://127.0.0.1/guacamole/`, ACL a `192.168.18.203`, y el ban separa por IP de cliente con `X-Forwarded-For`. **Falta el nginx del usuario** para AC6 |
+| [T06](../../../plans/F-001/T06-cuentas-totp.md) | Cuentas endurecidas, TOTP y límite de intentos | T05 | done | 2026-10-24: `guacadmin`/`guacadmin` rechazado, usuario `humberto` con TOTP **enrolado** (`TOTP.INFO_CODE_REQUIRED`), código inválido rechazado (`INFO_VERIFICATION_FAILED`) y ban con **429** tras 5 fallos |
+| [T07](../../../plans/F-001/T07-apache-tls.md) | vhost de Apache y TLS público | T06 | done | 2026-10-23/24: publicado en `https://remoto.informaticaperuana.com/guacamole/` con **Let's Encrypt** (cadena válida, vence 2027-01-21), 443 de `server01` con certificado propio y ACL al nginx, ban por IP de cliente. Se cerró una **exposición**: el vhost servía `/var/www/html` y publicaba una app PHP (`/maestro/` → ahora 404) |
 | [T08](../../../plans/F-001/T08-conexion-rdp.md) | Conexión RDP a la VM Windows | T07 | pending | — |
 | [T09](../../../plans/F-001/T09-smoke-test.md) | Suite smoke, `tests.commands` y reinicio | T07 | partial | 2026-10-21/23: `tests/smoke.mjs` con **6 PASS** contra el host y **SKIP exit 0** sin entorno; AC11 cumplido. Falta AC12 (reinicio, gate) y la rama pública (depende de AC6) |
 
@@ -31,8 +31,8 @@ Un AC, una tarea dueña ([`F-001.spec.md`](./F-001.spec.md) §Criterios de acept
 | AC2 | R3 | T05 | done | `127.0.0.1:4822`, `127.0.0.1:5434`, `[::ffff:127.0.0.1]:8081`; **ninguno en `0.0.0.0`**. El 443 escucha en todo, pero desde `192.168.18.41` responde **403** (solo `192.168.18.203` y loopback) |
 | AC3 | R5 | T04 | done | `\dt` con `guacamole_user`/`guacamole_db` lista las tablas `guacamole_*` (23) |
 | AC4 | R5 | T05 | done | `POST /api/tokens` → `authToken` con `dataSource: postgresql` |
-| AC5 | R6 | T06 | partial | 1/3 y 2/3 hechos: `guacadmin`/`guacadmin` rechazado y TOTP exigido (`TOTP.INFO_ENROLL_REQUIRED`). Falta 3/3: código TOTP caducado, que exige el dispositivo enrolado (usuario) |
-| AC6 | R4 | T07 | pending | — |
+| AC5 | R6 | T06 | done | 1/3 `guacadmin`/`guacadmin` → `Invalid login`. 2/3 `humberto` + contraseña → `TOTP.INFO_CODE_REQUIRED` (enrolado). 3/3 código inválido → `TOTP.INFO_VERIFICATION_FAILED` |
+| AC6 | R4 | T07 | done | `https://remoto.informaticaperuana.com/guacamole/` → **200**, emisor **Let's Encrypt (YE1)**, `ssl_verify_result=0`, vence 2027-01-21, cuerpo = login de Guacamole |
 | AC7 | R7 | T08 | pending | — |
 | AC8 | R7 | T08 | pending | — |
 | AC9 | R2 | T05 | done | guacd 1.6.0 · webapp 1.6.0 (`pom.properties`) · extensión 1.6.0 · driver 42.7.2 · Tomcat 9.0.123 (JVM built 21, corre en Java 17) |
@@ -232,9 +232,28 @@ Es decir: el ban cuenta **por IP de cliente**, no por la del proxy. Sin esto, ci
 - **Tres tropiezos, todos corregidos en el script:** (1) la válvula se insertó en medio del tag `<Host ...>`, que ocupa dos líneas, y dejó Tomcat en `503`; (2) el regex quedó con **dobles** barras invertidas; (3) el `re.sub` del patrón de log tocó una línea de comentario. El script ahora **valida el XML con `ElementTree` antes de escribir**.
 - El log de Tomcat sigue mostrando `127.0.0.1` en `%a` aunque la cabecera llega (`xff=203.0.113.9, 127.0.0.1`) y el ban sí separa por IP. Queda como observación en [`../../../BACKLOG.md`](../../../BACKLOG.md).
 
-### Falta para cerrar T07 (AC6)
+### Cierre de T07 (2026-10-24)
 
-El nginx del usuario publicando el dominio. Cuando esté, se verifica desde fuera y AC6 cierra.
+Publicado por el nginx del usuario (Nginx Proxy Manager, UI en el 81) como `remoto.informaticaperuana.com` → `https://192.168.18.70/guacamole/`.
+
+```
+Subject: CN=remoto.informaticaperuana.com
+Issuer:  CN=YE1, O=Let's Encrypt, C=US
+Vence:   2027-01-21
+ssl_verify_result = 0        (cadena valida, sin -k)
+
+/              -> 302  https://remoto.informaticaperuana.com/guacamole/
+/guacamole     -> 301  https://remoto.informaticaperuana.com/guacamole/
+/guacamole/    -> 200
+/maestro/      -> 404
+```
+
+**Dos defectos encontrados y corregidos al publicar:**
+
+1. **Exposición de `/var/www/html` (grave).** El vhost del 443 no declaraba `DocumentRoot`, así que heredaba el global y **todo** lo que hay en `/var/www/html` se servía a través del proxy público. El `index.html` del host redirige a `/maestro/`, una **app PHP**: al entrar al dominio aparecía esa aplicación, no Guacamole. Se fijó `DocumentRoot /var/www/guacamole-vhost-vacio` (inexistente, con `Require all denied`): ahora cualquier ruta que no sea `/guacamole/` da **404**.
+2. **`/guacamole` sin barra final daba *Not Found*** (Tomcat no resuelve el contexto sin la barra). Se añadieron `RedirectMatch 301 ^/guacamole$ /guacamole/` y `RedirectMatch 302 ^/$ /guacamole/`, así que la raíz del dominio también lleva al login.
+
+Los dos están en `ops/50-apache-tls.sh`; el script es idempotente y se reejecutó para aplicarlos.
 
 ## T09 — suite smoke (2026-10-23) — `partial`
 
@@ -262,6 +281,21 @@ SKIP URL publica (F001_PUBLIC_URL no definida)
 - **Los dos caminos probados:** con `F001_HOST` comprueba de verdad; sin él sale SKIP con **exit 0**, así que no puede dejar en rojo el harness de un clon sin acceso al host.
 - **AC11 verificado:** los cuatro `ops/*.sh` están en ASCII puro y sin CRLF (comprobado byte a byte, no con `grep`).
 - **Falta:** AC12 (reinicio, gate con ventana acordada) y la rama pública, que necesita `F001_PUBLIC_URL` y por tanto AC6.
+
+### Cierre de T06 (2026-10-24)
+
+```
+$ # sin segundo factor
+humberto + contraseña            -> {"key":"TOTP.INFO_CODE_REQUIRED"}
+$ # con código inválido
+...&guac-totp=000000             -> {"key":"TOTP.INFO_VERIFICATION_FAILED","type":"BAD_REQUEST"}
+$ # cuenta por defecto
+guacadmin/guacadmin              -> {"message":"Invalid login"}
+```
+
+Los tres puntos de AC5 quedan cubiertos: no se entra con la cuenta de fábrica, hace falta el segundo factor, y un código fuera de la ventana (inválido o vencido) se rechaza con `INFO_VERIFICATION_FAILED`.
+
+**Rotación de la contraseña de `humberto`** (2026-10-24, a pedido del usuario, por ser la generada ilegible): se hizo por `PUT /users/{u}/password` con la extensión de TOTP **apartada durante ~30 segundos** y repuesta al terminar; se verificó que la nueva autentica y la vieja ya no. La contraseña vive en `/root/humberto.pass` (`600`) y **no** en el repo. Este es el procedimiento a repetir si hay que rotarla: con TOTP activo, el login por API sin código no sirve.
 
 ## Notas de ejecución
 

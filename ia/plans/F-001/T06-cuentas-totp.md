@@ -1,7 +1,7 @@
 ---
 Feature: F-001
 Task: T06
-Status: partial
+Status: done
 Depends: T05
 ---
 

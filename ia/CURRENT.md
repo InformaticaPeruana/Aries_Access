@@ -8,27 +8,27 @@ Acceso a las VMs Windows de VMware desde el navegador con Apache Guacamole: un s
 
 ## Current Task
 
-F-001 · **T08** — conexión RDP a `192.168.18.41`. Bloqueada: faltan las credenciales de Windows.
+F-001 · **T08** — conexión RDP a `192.168.18.41`. **Bloqueada**: faltan las credenciales de Windows.
 
 ## Status
 
-`in_progress` — T01–T05 `done`; **T06 y T07 `partial`** (falta el enrolamiento TOTP y el nginx del usuario). T08–T09 pendientes.
+`in_progress` — T01–T07 `done`; T09 `partial` (falta AC12, el reinicio). **T08 pendiente**: faltan las credenciales de Windows.
 
 ## Last Completed
 
-**T07 (lado `server01`)**: Apache publica `https://192.168.18.70/guacamole/` con certificado propio (`200` local), **solo** acepta a `192.168.18.203` (desde otra IP: `403`) y el límite de intentos separa por IP de cliente con `X-Forwarded-For` (verificado: 5 fallos de una IP bloquean solo a esa).
+**T06 y T07 cerradas**: Guacamole publicado en `https://remoto.informaticaperuana.com/guacamole/` con Let's Encrypt, TOTP enrolado y exigido, contraseña de `humberto` rotada a una dictable, y la app PHP del host dejó de estar expuesta (`/maestro/` → 404).
 
 ## Next
 
-1. **Vos:** publicar `/guacamole/` en tu nginx (`192.168.18.203`) apuntando a `https://192.168.18.70/guacamole/`; decir en qué **puerto** y con qué TLS, para cerrar AC6.
-2. **Vos:** enrolar el TOTP de `humberto` (QR) para cerrar AC5.
-3. **T08**: conexión RDP a `192.168.18.41`. Necesita el **usuario y la contraseña de Windows**.
+1. **T08:** crear la conexión RDP a `192.168.18.41` y probarla en el navegador. Necesita el **usuario y la contraseña de Windows**.
+2. **AC12:** reiniciar `server01` en una ventana acordada (gate: tumba Supabase, n8n y Chatwoot) y comprobar que todo vuelve solo.
+3. **Revisión post-implementación** sobre `ops/` y la evidencia del TRACKING antes de cerrar F-001 (obligatoria por riesgo alto).
 
 ## Blockers
 
-- **El nginx del usuario** (`192.168.18.203`): bloquea AC6, no el resto.
-- **Credenciales del guest** (`usuario` de Windows en `192.168.18.41`): se necesitan en T08 y se cargan en Guacamole, no en el repo.
-- **Reserva de DHCP de `server01`** (ítem 7): no bloquea, pero el vhost y el certificado interno se romperán el día que cambie la IP.
+- **Credenciales del guest** (`usuario` de Windows en `192.168.18.41`): bloquean T08. Se cargan en Guacamole, no en el repo.
+- **Ventana para reiniciar `server01`**: bloquea AC12.
+- **Reserva de DHCP de `server01`** (ítem 7 del CHECKLIST): no bloquea, pero el vhost y el certificado interno se romperían con un cambio de IP.
 
 ## Active Spec
 
