@@ -18,7 +18,7 @@ Bitácora de ejecución. **Único lugar donde vive el estado de las tareas**, ju
 | [T05](../../../plans/F-001/T05-tomcat-webapp.md) | Tomcat 9, webapp y extensiones en `127.0.0.1:8081` | T03, T04 | done | 2026-10-21: Tomcat **9.0.123** + webapp **1.6.0**, `-Xmx512m`, extensión JDBC y driver 42.7.2; **`authToken` real** con `dataSource: postgresql` |
 | [T06](../../../plans/F-001/T06-cuentas-totp.md) | Cuentas endurecidas, TOTP y límite de intentos | T05 | done | 2026-10-24: `guacadmin`/`guacadmin` rechazado, usuario `humberto` con TOTP **enrolado** (`TOTP.INFO_CODE_REQUIRED`), código inválido rechazado (`INFO_VERIFICATION_FAILED`) y ban con **429** tras 5 fallos |
 | [T07](../../../plans/F-001/T07-apache-tls.md) | vhost de Apache y TLS público | T06 | done | 2026-10-23/24: publicado en `https://remoto.informaticaperuana.com/guacamole/` con **Let's Encrypt** (cadena válida, vence 2027-01-21), 443 de `server01` con certificado propio y ACL al nginx, ban por IP de cliente. Se cerró una **exposición**: el vhost servía `/var/www/html` y publicaba una app PHP (`/maestro/` → ahora 404) |
-| [T08](../../../plans/F-001/T08-conexion-rdp.md) | Conexión RDP a la VM Windows | T07 | pending | — |
+| [T08](../../../plans/F-001/T08-conexion-rdp.md) | Conexión RDP a la VM Windows | T07 | partial | 2026-10-24: conexión **id 1** creada (`192.168.18.75`, `joseph`, `nla`, `ignore-cert`, unidad `Guacamole`) y permiso **READ** para `humberto`; el 3389 responde desde `server01`. **Falta** abrir el escritorio y probar el portapapeles (AC7/AC8) |
 | [T09](../../../plans/F-001/T09-smoke-test.md) | Suite smoke, `tests.commands` y reinicio | T07 | partial | 2026-10-21/23: `tests/smoke.mjs` con **6 PASS** contra el host y **SKIP exit 0** sin entorno; AC11 cumplido. Falta AC12 (reinicio, gate) y la rama pública (depende de AC6) |
 
 ## Estado por AC
@@ -296,6 +296,40 @@ guacadmin/guacadmin              -> {"message":"Invalid login"}
 Los tres puntos de AC5 quedan cubiertos: no se entra con la cuenta de fábrica, hace falta el segundo factor, y un código fuera de la ventana (inválido o vencido) se rechaza con `INFO_VERIFICATION_FAILED`.
 
 **Rotación de la contraseña de `humberto`** (2026-10-24, a pedido del usuario, por ser la generada ilegible): se hizo por `PUT /users/{u}/password` con la extensión de TOTP **apartada durante ~30 segundos** y repuesta al terminar; se verificó que la nueva autentica y la vieja ya no. La contraseña vive en `/root/humberto.pass` (`600`) y **no** en el repo. Este es el procedimiento a repetir si hay que rotarla: con TOTP activo, el login por API sin código no sirve.
+
+## T08 — conexión RDP (2026-10-24) — `partial`
+
+Creada por API (con la extensión de TOTP apartada y repuesta, igual que en la rotación de contraseña).
+
+```
+$ # alcance desde server01
+192.168.18.75 3389 OK
+$ POST /api/session/data/postgresql/connections -> HTTP 200   (id 1)
+```
+
+| Parámetro | Valor |
+|---|---|
+| `hostname` / `port` | `192.168.18.75` / `3389` |
+| `username` / `password` | `joseph` / (el que dio el usuario) |
+| `security` | **`nla`** |
+| `ignore-cert` | `true` (el guest usa certificado autofirmado) |
+| `enable-drive`, `drive-name`, `drive-path` | `true`, `Guacamole`, `/var/lib/guacd/drive` |
+| `create-drive-path` | `true` |
+| `disable-copy` / `disable-paste` | `false` / `false` → portapapeles en ambos sentidos |
+
+Permisos sobre la conexión 1:
+
+```
+guacadmin -> ADMINISTER, DELETE, UPDATE, READ
+humberto  -> READ
+```
+
+**Dos cosas que hay que decir de esta tarea:**
+
+1. **Las credenciales del guest quedan EN CLARO en la base.** `select parameter_value ... where parameter_name='password'` devuelve el valor tal cual. La spec, la arquitectura y esta tarea afirmaban que iban cifradas con la clave de la base: era **falso** y quedó corregido en los tres sitios. Lo que protege es que PostgreSQL solo escucha en loopback y tiene su propia contraseña; el disco no está cifrado. Va a [`../../../BACKLOG.md`](../../../BACKLOG.md).
+2. **El endpoint `PATCH /connections/{id}/permissions` devuelve 404** en 1.6.0. El permiso se concedió en `guacamole_connection_permission` (equivale a lo que hace la UI). Para la próxima, la ruta soportada es `PATCH /users/{usuario}/permissions` con `/connectionPermissions/{id}`.
+
+**Falta para cerrar T08:** que el usuario abra la conexión en el navegador (AC7) y confirme el portapapeles y la unidad `Guacamole` en el guest (AC8).
 
 ## Notas de ejecución
 

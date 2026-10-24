@@ -27,7 +27,7 @@ Estado arquitectónico **actual**. Se actualiza solo cuando cambia la arquitectu
 
 ## Persistencia
 
-Una sola base: `guacamole_db` en el PostgreSQL del host (`127.0.0.1:5434`), con las tablas de Guacamole (`guacamole_user`, `guacamole_connection`, `guacamole_connection_parameter`, `guacamole_sharing_profile`, …). **Las credenciales de los guests se guardan en Guacamole**, cifradas con la clave derivada de la contraseña del usuario de base; el `connection_id` es la identidad de una conexión y **no** es estable si se recrea (rompe deep links). Ver [`GATES.md`](./GATES.md).
+Una sola base: `guacamole_db` en el PostgreSQL del host (`127.0.0.1:5434`), con las tablas de Guacamole (`guacamole_user`, `guacamole_connection`, `guacamole_connection_parameter`, `guacamole_sharing_profile`, …). **Las credenciales de los guests se guardan como parámetros de la conexión y quedan EN CLARO en `guacamole_connection_parameter`** (comprobado en T08: `password=123` se lee tal cual). La protección real es que la base solo escucha en loopback y tiene su propia contraseña; el disco **no** está cifrado. Ver [`GATES.md`](./GATES.md) y [`BACKLOG.md`](./BACKLOG.md).
 
 ## APIs
 
