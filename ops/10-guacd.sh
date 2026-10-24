@@ -87,6 +87,8 @@ Group=daemon
 # FreeRDP guarda configuracion y certificados en $HOME: /usr/sbin no es
 # escribible y sin esto la negociacion TLS/NLA puede fallar.
 Environment=HOME=/var/lib/guacd
+# Las grabaciones contienen todo lo visible: nacen en 0640, no legibles por todos.
+UMask=0007
 ExecStart=/usr/local/sbin/guacd -f -b 127.0.0.1
 Restart=on-failure
 RestartSec=5

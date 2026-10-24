@@ -32,16 +32,18 @@ log "configuracion SMTP (${CONF}, 600)"
 install -d -m 0755 "${CONF_DIR}"
 if [ -n "${SMTP_HOST:-}" ]; then
   umask 077
-  cat > "${CONF}" <<EOF
-SMTP_HOST=${SMTP_HOST}
-SMTP_PORT=${SMTP_PORT:-465}
-SMTP_SECURE=${SMTP_SECURE:-ssl}
-SMTP_USER=${SMTP_USER:-}
-SMTP_PASS=${SMTP_PASS:-}
-SMTP_FROM=${SMTP_FROM:-${SMTP_USER:-}}
-SMTP_FROM_NAME=${SMTP_FROM_NAME:-Aries Access}
-ALERT_TO=${ALERT_TO:-${SMTP_FROM:-${SMTP_USER:-}}}
-EOF
+  # printf y no heredoc: un '$', un backtick o una barra en la contrasena se
+  # expandirian al escribir el archivo y el login fallaria en silencio.
+  {
+    printf 'SMTP_HOST=%s\n' "${SMTP_HOST}"
+    printf 'SMTP_PORT=%s\n' "${SMTP_PORT:-465}"
+    printf 'SMTP_SECURE=%s\n' "${SMTP_SECURE:-ssl}"
+    printf 'SMTP_USER=%s\n' "${SMTP_USER:-}"
+    printf 'SMTP_PASS=%s\n' "${SMTP_PASS:-}"
+    printf 'SMTP_FROM=%s\n' "${SMTP_FROM:-${SMTP_USER:-}}"
+    printf 'SMTP_FROM_NAME=%s\n' "${SMTP_FROM_NAME:-Aries Access}"
+    printf 'ALERT_TO=%s\n' "${ALERT_TO:-${SMTP_FROM:-${SMTP_USER:-}}}"
+  } > "${CONF}"
   chmod 600 "${CONF}"
   echo "   escrita"
 else
@@ -61,7 +63,9 @@ Description=Aries - colector de eventos y alertas
 
 [Service]
 Type=oneshot
-ExecStart=/usr/local/sbin/aries-eventos.py
+# flock: el timer y una corrida manual no deben solaparse (duplicaria eventos
+# y podria retroceder el estado).
+ExecStart=/usr/bin/flock -n /var/lib/aries/state.lock /usr/local/sbin/aries-eventos.py
 SVC_EOF
 
 cat > /etc/systemd/system/aries-eventos.timer <<'TMR_EOF'
@@ -89,6 +93,17 @@ fi
 
 log "primera corrida"
 "${DEST}" || true
+
+log "rotacion de eventos"
+cat > /etc/logrotate.d/aries-eventos <<'LR_EOF'
+/var/log/aries/eventos.jsonl {
+    weekly
+    rotate 12
+    missingok
+    notifempty
+    compress
+}
+LR_EOF
 
 log "verificacion"
 systemctl is-enabled aries-eventos.timer

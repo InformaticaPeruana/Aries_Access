@@ -2,17 +2,27 @@
 # F-003 T02 - colector de eventos y alertas de Aries Access.
 #
 # Lee lo nuevo de:
-#   - guacamole_connection_history  (accesos a escritorios, con IP real)
-#   - localhost_access_log.*.txt    (intentos fallidos y bloqueos, con xff)
+#   - guacamole_connection_history  (accesos cerrados, con IP real)
+#   - localhost_access_log.*.txt    (intentos fallidos y bloqueos)
 #
 # Escribe JSONL en /var/log/aries/eventos.jsonl y manda correo cuando:
 #   - hay un acceso FUERA del horario laboral
 #   - una misma IP acumula N fallos en una ventana corta
 #
 # Uso:  aries-eventos.py            (lo lanza el timer cada 5 min)
-#       aries-eventos.py --test     (manda un correo de prueba y sale)
+#       aries-eventos.py --test     (correo de prueba y sale)
 #
 # Config: /etc/aries/alertas.env (600). Estado: /var/lib/aries/state.json
+#
+# Decisiones que importan:
+#   - La IP se resuelve como RemoteIpValve: X-Forwarded-For de DERECHA a
+#     IZQUIERDA descartando saltos internos. La izquierda la pone el cliente.
+#   - El timestamp del log se parsea con su offset; asumir UTC rompia la
+#     ventana de fuerza bruta.
+#   - El watermark de accesos es por end_date, no por history_id: las sesiones
+#     pueden cerrar en orden distinto al que se abrieron.
+#   - Las alertas pendientes se persisten hasta que el correo es aceptado.
+#   - Sin SMTP configurado, el colector falla siempre (no solo cuando alerta).
 
 import json
 import os
@@ -36,9 +46,11 @@ LIMA = timezone(timedelta(hours=-5))
 FAIL_WINDOW_MIN = 15
 FAIL_THRESHOLD = 5
 
+INTERNAL = {"127.0.0.1", "::1", "192.168.18.203"}
+
 LOG_RE = re.compile(
     r'\[(?P<ts>[^\]]+)\]\s+"(?P<method>\S+)\s+(?P<uri>[^"]*)"\s+(?P<status>\d{3})'
-    r'.*?xff=(?P<xff>[^,\s]+)'
+    r'.*?xff=(?P<xff>.+)$'
 )
 
 
@@ -62,14 +74,17 @@ def load_state():
             with open(STATE, "r", encoding="utf-8") as fh:
                 return json.load(fh)
         except Exception:
-            pass
-    return {"history_watermark": None, "log_offsets": {}, "failures": {}}
+            sys.stderr.write("AVISO: state.json ilegible, se reinicia\n")
+    return {"last_end": None, "log_offsets": {}, "failures": {},
+            "pending_alerts": [], "primera_corrida": True}
 
 
 def save_state(state):
     os.makedirs(os.path.dirname(STATE), exist_ok=True)
-    with open(STATE, "w", encoding="utf-8") as fh:
+    tmp = STATE + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as fh:
         json.dump(state, fh)
+    os.replace(tmp, STATE)
 
 
 def db_json(sql):
@@ -81,6 +96,24 @@ def db_json(sql):
         capture_output=True, text=True, env=env, timeout=30, check=True,
     ).stdout.strip()
     return json.loads(out) if out else []
+
+
+def db_scalar(sql):
+    pwd = open(DB_PASS_FILE, "r", encoding="utf-8").read().strip()
+    env = dict(os.environ, PGPASSWORD=pwd)
+    return subprocess.run(
+        ["psql", "-h", "127.0.0.1", "-p", "5434", "-U", "guacamole_user",
+         "-d", "guacamole_db", "-tAc", sql],
+        capture_output=True, text=True, env=env, timeout=30, check=True,
+    ).stdout.strip()
+
+
+def client_ip(xff):
+    partes = [p.strip() for p in xff.split(",") if p.strip()]
+    for ip in reversed(partes):
+        if ip not in INTERNAL:
+            return ip
+    return partes[0] if partes else "-"
 
 
 def fuera_de_horario(dt_lima):
@@ -95,7 +128,7 @@ def fuera_de_horario(dt_lima):
 
 def send_mail(conf, subject, body):
     if not conf.get("SMTP_HOST"):
-        return False
+        raise RuntimeError("sin SMTP_HOST en %s" % CONF)
     msg = EmailMessage()
     msg["Subject"] = subject
     msg["From"] = formataddr((conf.get("SMTP_FROM_NAME", "Aries"), conf.get("SMTP_FROM", "")))
@@ -113,7 +146,6 @@ def send_mail(conf, subject, body):
         server.send_message(msg)
     finally:
         server.quit()
-    return True
 
 
 def emit(events):
@@ -125,39 +157,54 @@ def emit(events):
             fh.write(json.dumps(ev, ensure_ascii=False) + "\n")
 
 
-def new_history(state):
-    wm = state.get("history_watermark")
-    cond = ""
-    if wm:
-        cond = "where start_date > '%s'::timestamptz" % wm.replace("'", "")
+def new_history(state, primera):
+    """Sesiones cerradas, por end_date: no importa el orden de apertura."""
+    if primera:
+        return []
+    last = state.get("last_end")
+    cond = "and end_date > '%s'::timestamptz" % last.replace("'", "") if last else ""
     sql = (
         "select coalesce(json_agg(row_to_json(t)), '[]') from ("
-        " select connection_id, connection_name, start_date, end_date, username, remote_host"
-        " from guacamole_connection_history %s order by start_date) t;" % cond
+        " select history_id, connection_name, start_date, end_date, username, remote_host"
+        " from guacamole_connection_history"
+        " where end_date is not null %s"
+        " order by end_date) t;" % cond
     )
     return db_json(sql)
 
 
-def new_failures(state):
-    """Lee solo las lineas nuevas de los access logs de Tomcat."""
+def new_failures(state, primera):
     events = []
     offsets = state.setdefault("log_offsets", {})
+    vistos = set()
+    leidas = 0
+    casadas = 0
+
     for name in sorted(os.listdir(LOG_DIR)):
         if not name.startswith("localhost_access_log"):
             continue
+        vistos.add(name)
         path = os.path.join(LOG_DIR, name)
         try:
             size = os.path.getsize(path)
         except OSError:
             continue
-        off = offsets.get(name, 0)
+
+        off = offsets.get(name, size if primera else 0)
         if size < off:
-            off = 0  # rotado
+            off = 0
         if size == off:
+            offsets[name] = off
             continue
+
+        consumido = off
         with open(path, "r", encoding="utf-8", errors="replace") as fh:
             fh.seek(off)
             for line in fh:
+                if not line.endswith("\n"):
+                    break
+                consumido += len(line.encode("utf-8"))
+                leidas += 1
                 m = LOG_RE.search(line)
                 if not m:
                     continue
@@ -165,62 +212,103 @@ def new_failures(state):
                 uri = m.group("uri")
                 if "/api/tokens" not in uri or status not in ("401", "403", "429"):
                     continue
+                casadas += 1
                 try:
-                    ts = datetime.strptime(m.group("ts")[:20], "%d/%b/%Y:%H:%M:%S")
-                    ts = ts.replace(tzinfo=timezone.utc)
+                    ts = datetime.strptime(m.group("ts").strip(), "%d/%b/%Y:%H:%M:%S %z")
                 except ValueError:
+                    try:
+                        ts = datetime.strptime(m.group("ts").strip()[:20], "%d/%b/%Y:%H:%M:%S")
+                        ts = ts.replace(tzinfo=timezone.utc)
+                    except ValueError:
+                        continue
+                if primera:
                     continue
                 events.append({
                     "ts": ts.isoformat(),
                     "tipo": "bloqueo" if status == "429" else "fallo",
                     "usuario": "-",
                     "conexion": "-",
-                    "ip": m.group("xff"),
+                    "ip": client_ip(m.group("xff")),
                     "fuera_horario": fuera_de_horario(ts.astimezone(LIMA)),
                     "detalle": "HTTP %s en %s" % (status, uri),
                 })
-            offsets[name] = fh.tell()
+        offsets[name] = consumido
+
+    for name in list(offsets):
+        if name not in vistos:
+            del offsets[name]
+
+    if leidas and not casadas:
+        sys.stderr.write("AVISO: %d lineas leidas y ninguna con /api/tokens + xff; "
+                         "revisar el patron del access log\n" % leidas)
     return events
 
 
 def main():
     conf = load_conf()
     if "--test" in sys.argv:
-        ok = send_mail(conf, "[Aries Access] Correo de prueba",
-                       "Si recibis esto, las alertas del portal estan funcionando.\n")
-        print("correo de prueba enviado" if ok else "sin configuracion SMTP")
-        return 0 if ok else 1
+        try:
+            send_mail(conf, "[Aries Access] Correo de prueba",
+                      "Si recibis esto, las alertas del portal estan funcionando.\n")
+            print("correo de prueba enviado")
+            return 0
+        except Exception as exc:
+            sys.stderr.write("ERROR enviando correo de prueba: %s\n" % exc)
+            return 1
+
+    if not conf.get("SMTP_HOST"):
+        sys.stderr.write("ERROR: falta SMTP_HOST en %s; no se pueden enviar alertas\n" % CONF)
+        return 1
 
     state = load_state()
+    primera = bool(state.get("primera_corrida", False))
     events = []
+    alerts = []
 
-    for row in new_history(state):
+    # Migracion / primera corrida: el watermark arranca en el ultimo cierre
+    # conocido para no reenviar el historico. El filtro end_date > last_end ya
+    # excluye lo anterior: NO se fuerza "primera" (eso descartaria la sesion
+    # siguiente si el historico estaba vacio).
+    if not state.get("last_end"):
+        max_end = db_scalar("select coalesce(max(end_date)::text, '') from guacamole_connection_history")
+        if max_end:
+            state["last_end"] = max_end
+            sys.stderr.write("INFO: watermark inicializado en %s (no se reenvia el historico)\n" % max_end)
+
+    for row in new_history(state, primera):
         try:
             start = datetime.fromisoformat(row["start_date"])
+            end = datetime.fromisoformat(row["end_date"])
         except Exception:
             continue
-        local = start.astimezone(LIMA)
+        dur = int((end - start).total_seconds())
         events.append({
             "ts": start.isoformat(),
             "tipo": "acceso",
             "usuario": row.get("username"),
             "conexion": row.get("connection_name"),
             "ip": row.get("remote_host"),
-            "fuera_horario": fuera_de_horario(local),
-            "detalle": "hasta %s" % row.get("end_date"),
+            "fuera_horario": fuera_de_horario(start.astimezone(LIMA)),
+            "inicio": start.isoformat(),
+            "fin": end.isoformat(),
+            "duracion_s": dur,
+            "detalle": "duracion %ds" % dur,
         })
-        state["history_watermark"] = row["start_date"]
+        state["last_end"] = row["end_date"]
+        if fuera_de_horario(start.astimezone(LIMA)):
+            alerts.append("Acceso FUERA de horario: %s desde %s a %s (%s)."
+                          % (row.get("username"), row.get("remote_host"),
+                             row.get("connection_name"),
+                             start.astimezone(LIMA).strftime("%Y-%m-%d %H:%M")))
 
-    events.extend(new_failures(state))
+    events.extend(new_failures(state, primera))
 
-    # Fallos por IP en ventana corta.
     now = datetime.now(timezone.utc)
     fails = state.setdefault("failures", {})
     for ev in events:
         if ev["tipo"] in ("fallo", "bloqueo"):
             fails.setdefault(ev["ip"], []).append(ev["ts"])
 
-    alerts = []
     for ip, stamps in list(fails.items()):
         keep = []
         for s in stamps:
@@ -234,26 +322,30 @@ def main():
         if len(keep) >= FAIL_THRESHOLD:
             alerts.append("Fuerza bruta probable desde %s: %d intentos fallidos en %d minutos."
                           % (ip, len(keep), FAIL_WINDOW_MIN))
-            fails[ip] = []  # no repetir el aviso en cada corrida
+            fails[ip] = []
+        elif not keep:
+            del fails[ip]
 
-    fuera = [e for e in events if e["tipo"] == "acceso" and e["fuera_horario"]]
-    for e in fuera:
-        alerts.append("Acceso FUERA de horario: %s desde %s a %s (%s)."
-                      % (e["usuario"], e["ip"], e["conexion"],
-                         datetime.fromisoformat(e["ts"]).astimezone(LIMA).strftime("%Y-%m-%d %H:%M")))
+    state["primera_corrida"] = False
+
+    pendientes = state.setdefault("pending_alerts", [])
+    pendientes.extend(alerts)
+
+    if pendientes:
+        body = ("Eventos detectados en Aries Access Infrastructure\n\n"
+                + "\n".join("- " + a for a in pendientes)
+                + "\n\nDetalle completo: %s\n" % OUT)
+        try:
+            send_mail(conf, "[Aries Access] Alerta de seguridad", body)
+            state["pending_alerts"] = []  # entregadas
+        except Exception as exc:
+            sys.stderr.write("ERROR enviando alerta (queda pendiente): %s\n" % exc)
+            emit(events)
+            save_state(state)
+            return 1
 
     emit(events)
     save_state(state)
-
-    if alerts:
-        body = "Eventos detectados en Aries Access Infrastructure\n\n" + "\n".join("- " + a for a in alerts)
-        body += "\n\nDetalle completo: %s\n" % OUT
-        try:
-            send_mail(conf, "[Aries Access] Alerta de seguridad", body)
-        except Exception as exc:  # no tumbar el timer por un fallo de correo
-            sys.stderr.write("ERROR enviando correo: %s\n" % exc)
-            return 1
-
     print("eventos nuevos: %d | alertas: %d" % (len(events), len(alerts)))
     return 0
 

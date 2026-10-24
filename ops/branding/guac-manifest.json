@@ -5,5 +5,6 @@
   "smallIcon": "images/icon-a-64.png",
   "largeIcon": "images/icon-a-144.png",
   "css": ["css/aries.css"],
+  "js": ["js/aries.js"],
   "translations": ["translations/en.json", "translations/es.json"]
 }

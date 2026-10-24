@@ -24,6 +24,7 @@ Prefijos de ID (uno por módulo, consecutivo desde `001`): `F-` features, `S-` s
 |----|--------|--------|--------|--------|
 | [F-001](./infra/F-001/F-001.spec.md) | infra | Desplegar Guacamole nativo en `server01` con acceso RDP a las VMs del ESXi | alto | in_progress |
 | [F-002](./ui/F-002/F-002.spec.md) | ui | Identidad visual de Aries Access Infrastructure sobre Guacamole | medio | completed |
+| [F-003](./seguridad/F-003/F-003.spec.md) | seguridad | Observabilidad, grabación de sesiones y endurecimiento del acceso remoto | alto | in_progress |
 
 ## Diferencias aceptadas / superseded
 

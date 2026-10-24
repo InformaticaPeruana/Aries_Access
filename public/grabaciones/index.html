@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Grabaciones - Aries Access Infrastructure</title>
+  <link rel="stylesheet" href="/portal/styles.css">
+  <style>
+    .rec-layout { display: grid; grid-template-columns: 20rem 1fr; gap: 1rem; padding: 1.6rem; }
+    @media (max-width: 900px) { .rec-layout { grid-template-columns: 1fr; } }
+    .rec-list { list-style: none; margin: 0; padding: 0; }
+    .rec-list li { margin-bottom: .4rem; }
+    .rec-list a {
+      display: block; padding: .55rem .7rem; border-radius: .3rem;
+      background: #fff; border: 1px solid var(--gray-200);
+      color: var(--navy-900); text-decoration: none; font-size: .88rem;
+    }
+    .rec-list a:hover, .rec-list a.active { border-color: var(--amber-500); }
+    .rec-list .meta { display: block; color: var(--gray-600); font-size: .78rem; font-family: var(--mono); }
+    .player { background: #000; border-radius: .45rem; padding: .5rem; border-top: 3px solid var(--amber-500); }
+    #display { width: 100%; height: auto; display: block; background: #000; }
+    .controls { display: flex; align-items: center; gap: .8rem; margin-top: .6rem; }
+    .controls button { padding: .45rem .9rem; border-radius: .3rem; border: 1px solid var(--amber-600); background: var(--amber-500); color: #1A1200; font-weight: 600; cursor: pointer; }
+    .controls .pos { color: #B9C6D4; font-family: var(--mono); font-size: .8rem; }
+    .empty { color: var(--gray-600); font-size: .9rem; padding: 2rem; text-align: center; }
+  </style>
+</head>
+<body>
+
+  <header class="top">
+    <img class="brand" src="/portal/img/logo-aries.jpg" alt="ARIES">
+    <div class="brand-text">
+      <h1>Grabaciones de sesi&oacute;n</h1>
+      <p>Se conservan 7 d&iacute;as</p>
+    </div>
+  </header>
+
+  <div class="rec-layout">
+    <div>
+      <h2 style="font-size:.78rem;letter-spacing:.12em;text-transform:uppercase;color:var(--gray-600)">Disponibles</h2>
+      <ul class="rec-list" id="list"><li class="empty">Cargando...</li></ul>
+    </div>
+
+    <div class="player">
+      <div id="display"></div>
+      <div class="controls">
+        <button id="play" disabled>Reproducir</button>
+        <span class="pos" id="pos">00:00 / 00:00</span>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <span>Aries Access Infrastructure</span>
+    <a href="/desktop/">Ir al portal de escritorios</a>
+  </footer>
+
+  <script src="/desktop/guacamole-common-js/all.min.js"></script>
+  <script>
+    (function () {
+      "use strict";
+
+      var listEl = document.getElementById("list");
+      var displayEl = document.getElementById("display");
+      var playBtn = document.getElementById("play");
+      var posEl = document.getElementById("pos");
+
+      var recording = null;
+      var timer = null;
+
+      function fmt(ms) {
+        if (!ms || ms < 0) ms = 0;
+        var s = Math.floor(ms / 1000);
+        var m = Math.floor(s / 60);
+        s = s % 60;
+        return (m < 10 ? "0" : "") + m + ":" + (s < 10 ? "0" : "") + s;
+      }
+
+      function tick() {
+        if (!recording) return;
+        posEl.textContent = fmt(recording.getPosition()) + " / " + fmt(recording.getDuration());
+      }
+
+      function load(url, anchor) {
+        if (recording) {
+          try { recording.pause(); } catch (e) {}
+          recording = null;
+        }
+        if (timer) { clearInterval(timer); timer = null; }
+        displayEl.innerHTML = "";
+        playBtn.disabled = true;
+
+        var links = document.querySelectorAll(".rec-list a");
+        for (var i = 0; i < links.length; i++) links[i].classList.remove("active");
+        if (anchor) anchor.classList.add("active");
+
+        // Guacamole.SessionRecording acepta un Blob o un Tunnel, NO una URL.
+        fetch(url, { credentials: "same-origin" })
+          .then(function (r) {
+            if (!r.ok) throw new Error("HTTP " + r.status);
+            return r.blob();
+          })
+          .then(function (blob) {
+            recording = new Guacamole.SessionRecording(blob);
+            recording.onerror = function (msg) {
+              displayEl.innerHTML = '<p style="color:#B42318;padding:1rem">No se pudo leer la grabacion: ' + msg + "</p>";
+            };
+            displayEl.appendChild(recording.getDisplay().getElement());
+            // play() antes de tener el blob parseado no arranca: se espera onload.
+            recording.onload = function () {
+              recording.play();
+              playBtn.disabled = false;
+              playBtn.dataset.playing = "1";
+              playBtn.textContent = "Pausar";
+              timer = setInterval(tick, 500);
+            };
+            recording.oncomplete = function () {
+              if (timer) { clearInterval(timer); timer = null; }
+              playBtn.dataset.playing = "0";
+              playBtn.textContent = "Reproducir";
+              posEl.textContent = fmt(recording.getDuration()) + " / " + fmt(recording.getDuration());
+              try { recording.seek(0); } catch (e) {}
+            };
+            recording.connect();
+          })
+          .catch(function (e) {
+            displayEl.innerHTML = '<p style="color:#B42318;padding:1rem">No se pudo descargar la grabacion: ' + e.message + "</p>";
+          });
+      }
+
+      playBtn.addEventListener("click", function () {
+        if (!recording) return;
+        if (playBtn.dataset.playing === "1") {
+          recording.pause();
+          playBtn.dataset.playing = "0";
+          playBtn.textContent = "Reproducir";
+        } else {
+          recording.play();
+          playBtn.dataset.playing = "1";
+          playBtn.textContent = "Pausar";
+        }
+      });
+
+      fetch("index.json", { cache: "no-store" })
+        .then(function (r) { return r.json(); })
+        .then(function (items) {
+          if (!items.length) {
+            listEl.innerHTML = '<li class="empty">No hay grabaciones todavia.</li>';
+            return;
+          }
+          listEl.innerHTML = "";
+          items.forEach(function (it) {
+            var li = document.createElement("li");
+            var a = document.createElement("a");
+            a.href = "#";
+            a.innerHTML = it.date + '<span class="meta">' + it.size + "</span>";
+            a.addEventListener("click", function (ev) {
+              ev.preventDefault();
+              load("files/" + encodeURIComponent(it.name), a);
+            });
+            li.appendChild(a);
+            listEl.appendChild(li);
+          });
+        })
+        .catch(function () {
+          listEl.innerHTML = '<li class="empty">No se pudo leer el indice.</li>';
+        });
+    })();
+  </script>
+</body>
+</html>

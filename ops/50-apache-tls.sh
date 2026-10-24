@@ -74,6 +74,31 @@ cat > "${CONF}" <<EOF
         Require ip ${NGINX_IP} 127.0.0.1
     </Location>
 
+    # Grabaciones: pagina propia con Basic Auth. /grabaciones/files/ apunta al
+    # directorio de guacd (grupo www-data, modo 2750 para que los .guac nuevos
+    # hereden el grupo).
+    #
+    # OJO: la autenticacion va en un <LocationMatch>, NO en <Directory>. El
+    # <Location /> global que restringe por IP gana sobre los <Directory> y
+    # anulaba el "Require valid-user".
+    Alias /grabaciones/files/ /var/www/aries-grabaciones/files/
+    Alias /grabaciones/ /var/www/aries-grabaciones/
+    <LocationMatch "^/grabaciones/">
+        AuthType Basic
+        AuthName "Grabaciones de sesion"
+        AuthUserFile /etc/apache2/aries-grabaciones.htpasswd
+        <RequireAll>
+            Require ip ${NGINX_IP} 127.0.0.1
+            Require valid-user
+        </RequireAll>
+    </LocationMatch>
+    <Directory /var/www/aries-grabaciones>
+        Options -Indexes
+    </Directory>
+    <Directory /var/www/aries-grabaciones/files>
+        Options -Indexes
+    </Directory>
+
     # La portada propia vive en /portal/, pero la raiz va DIRECTO a Guacamole:
     # el usuario pidio no pasar por una landing.
     Alias /portal/ /var/www/aries-portal/

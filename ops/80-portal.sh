@@ -22,6 +22,9 @@ done
 echo "== publicando en ${DEST} =="
 install -d -m 0755 "${DEST}"
 cp -a "${SRC}/." "${DEST}/"
+# La carpeta de grabaciones NO se publica en /portal/: se sirve solo en
+# /grabaciones/, detras de su propia autenticacion.
+rm -rf "${DEST}/grabaciones"
 find "${DEST}" -type d -exec chmod 0755 {} +
 find "${DEST}" -type f -exec chmod 0644 {} +
 

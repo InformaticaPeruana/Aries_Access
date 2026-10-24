@@ -27,7 +27,7 @@ if [ "$(id -u)" -ne 0 ]; then
   echo "ERROR: ejecutar con sudo" >&2
   exit 1
 fi
-for f in guac-manifest.json css/aries.css translations/en.json translations/es.json images/icon-a-64.png images/icon-a-144.png images/logo-login.jpg; do
+for f in guac-manifest.json css/aries.css translations/en.json translations/es.json images/icon-a-64.png images/icon-a-144.png images/logo-login.jpg js/aries.js; do
   [ -f "${SRC}/${f}" ] || { echo "ERROR: falta ${SRC}/${f}" >&2; exit 1; }
 done
 
@@ -45,7 +45,7 @@ PY
 
 log "construyendo ${JAR}"
 rm -f "${JAR}"
-( cd "${SRC}" && jar cf "${JAR}" guac-manifest.json css translations images )
+( cd "${SRC}" && jar cf "${JAR}" guac-manifest.json css js translations images )
 echo "   $(ls -l "${JAR}" | awk '{print $5}') bytes"
 
 log "instalando en ${DEST_DIR}"

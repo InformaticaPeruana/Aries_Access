@@ -8,35 +8,36 @@ Acceso a las VMs Windows de VMware desde el navegador con Apache Guacamole: un s
 
 ## Current Task
 
-F-001 · **T08** — conexión RDP a `192.168.18.41`. **Bloqueada**: faltan las credenciales de Windows.
+**F-003** · T03/T05 — página de grabaciones y acotamiento del RDP. Auditoría ISO 27001 el **lunes 2026-10-27**.
 
 ## Status
 
-`in_progress` — T01–T07 `done`; T09 `partial` (falta AC12, el reinicio). **T08 pendiente**: faltan las credenciales de Windows.
+`in_progress` — **F-001**: T08 `partial` (falta probar el escritorio y el portapapeles) y T09 `partial` (falta AC12, el reinicio). **F-003**: T01–T04 `done`, T05 `partial` (falta ejecutar el firewall en cada equipo). **F-002** `completed`.
 
 ## Last Completed
 
-**T06 y T07 cerradas**: Guacamole publicado en `https://remoto.informaticaperuana.com/desktop/` (con `/guacamole/` → 301) y Let's Encrypt, TOTP enrolado y exigido, contraseña de `humberto` rotada a una dictable, y la app PHP del host dejó de estar expuesta (`/maestro/` → 404).
+**Grabación de sesiones** con retención de 7 días, **colector de eventos con alertas por correo** (fuerza bruta y acceso fuera de horario) y **página de grabaciones** con Basic Auth en `/grabaciones/`. Documentos de auditoría e inventario de red en `ia/research/`.
 
 ## Next
 
-1. **T08:** crear la conexión RDP a `192.168.18.41` y probarla en el navegador. Necesita el **usuario y la contraseña de Windows**.
-2. **AC12:** reiniciar `server01` en una ventana acordada (gate: tumba Supabase, n8n y Chatwoot) y comprobar que todo vuelve solo.
-3. **Revisión post-implementación** sobre `ops/` y la evidencia del TRACKING antes de cerrar F-001 (obligatoria por riesgo alto).
+1. **F-003 T05:** ejecutar `ops/windows/rdp-firewall.ps1` en cada equipo Windows (cierra la brecha B3).
+2. **F-001 T08:** probar el escritorio y el portapapeles de las dos conexiones (AC7/AC8).
+3. **AC12:** reiniciar `server01` en una ventana acordada (gate) y comprobar que todo vuelve solo.
+4. **Revisión post-implementación** de F-001 y cierre de F-003 (ronda 3 del review).
 
 ## Blockers
 
-- **Credenciales del guest** (`usuario` de Windows en `192.168.18.41`): bloquean T08. Se cargan en Guacamole, no en el repo.
+- **`server01` sin VLAN**: el acotamiento del RDP es por equipo; depende de ejecutar el script en cada máquina.
 - **Ventana para reiniciar `server01`**: bloquea AC12.
 - **Reserva de DHCP de `server01`** (ítem 7 del CHECKLIST): no bloquea, pero el vhost y el certificado interno se romperían con un cambio de IP.
 
 ## Active Spec
 
-[`specs/infra/F-001/F-001.spec.md`](./specs/infra/F-001/F-001.spec.md) — F-001, riesgo alto, `in_progress`
+[`specs/seguridad/F-003/F-003.spec.md`](./specs/seguridad/F-003/F-003.spec.md) — F-003, riesgo alto, `in_progress`
 
 ## Active Plan
 
-[`plans/F-001/PLAN.md`](./plans/F-001/PLAN.md) — T01 y T02 cerradas; T03–T09 pendientes
+[`plans/F-003/PLAN.md`](./plans/F-003/PLAN.md) — T01–T04 cerradas, T05 parcial
 
 ## Entorno
 

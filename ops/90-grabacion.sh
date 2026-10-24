@@ -9,7 +9,7 @@
 set -euo pipefail
 
 RETENTION_DAYS=7
-REC_DIR="/var/lib/guacd/recordings"
+REC_DIR="/var/www/aries-grabaciones/files"
 PASSFILE="/root/guacamole-db.pass"
 PSQL="psql -h 127.0.0.1 -p 5434 -U guacamole_user -d guacamole_db"
 PRUNE="/usr/local/sbin/aries-grabacion-limpieza"
@@ -23,13 +23,13 @@ fi
 [ -s "${PASSFILE}" ] || { echo "ERROR: falta ${PASSFILE}" >&2; exit 1; }
 
 log "directorio de grabaciones"
-install -d -m 0750 -o daemon -g daemon "${REC_DIR}"
+install -d -m 2750 -o daemon -g www-data "${REC_DIR}"
 
 log "parametros de grabacion en todas las conexiones"
 export PGPASSWORD="$(cat "${PASSFILE}")"
 IDS="$($PSQL -tAc "select connection_id from guacamole_connection where protocol = 'rdp'")"
 for id in ${IDS}; do
-  for par in "recording-path:${REC_DIR}" "create-recording-path:true" "recording-name:\${HISTORY_UUID}"; do
+  for par in "recording-path:${REC_DIR}" "create-recording-path:true" "recording-name:\${HISTORY_UUID}" "recording-include-keys:true" "enable-drive:false"; do
     name="${par%%:*}"
     value="${par#*:}"
     existing="$($PSQL -tAc "select parameter_value from guacamole_connection_parameter
@@ -55,9 +55,12 @@ cat > "${PRUNE}" <<PRUNE_EOF
 set -eu
 DIR="${REC_DIR}"
 [ -d "\$DIR" ] || exit 0
-find "\$DIR" -type f -mtime +${RETENTION_DAYS} -print -delete
+find "\$DIR" -type f -mtime +$((RETENTION_DAYS - 1)) -print -delete
 PRUNE_EOF
 chmod 0755 "${PRUNE}"
+
+log "limpieza de la ruta anterior (si quedo algo)"
+if [ -d /var/lib/guacd/recordings ]; then find /var/lib/guacd/recordings -type f -print -delete 2>/dev/null || true; fi
 
 log "timer diario"
 cat > /etc/systemd/system/aries-grabacion-limpieza.service <<'SVC_EOF'

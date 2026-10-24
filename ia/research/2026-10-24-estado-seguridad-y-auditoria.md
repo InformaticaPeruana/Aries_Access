@@ -8,7 +8,7 @@
 
 ## 1. Resumen ejecutivo
 
-El portal está publicado con **HTTPS de CA pública**, autenticación **usuario + contraseña + segundo factor (TOTP)**, **límite de intentos** y **registro de accesos** en base de datos. La **transferencia de archivos está deshabilitada**. Hay **tres brechas abiertas** que deben declararse: **no hay grabación de sesiones**, **no hay envío automatizado de eventos a un SIEM ni alertas**, y **el RDP de las VMs es alcanzable desde toda la LAN**. Ninguna de las tres afecta la autenticación del portal, pero las tres son relevantes para los controles de registro, supervisión y segregación de redes.
+El portal está publicado con **HTTPS de CA pública**, autenticación **usuario + contraseña + segundo factor (TOTP)**, **límite de intentos** y **registro de accesos** en base de datos. Las sesiones **se graban y se conservan 7 días**, y hay **alertas por correo** ante fuerza bruta o acceso fuera de horario. La **transferencia de archivos está deshabilitada**. Las grabaciones se **ven desde una página propia** con credenciales separadas. Queda **una brecha abierta** que debe declararse: **el RDP de las VMs es alcanzable desde la LAN**; el control está definido y scripteado, pendiente de ejecutar equipo por equipo.
 
 ---
 
@@ -41,7 +41,7 @@ El portal está publicado con **HTTPS de CA pública**, autenticación **usuario
 | **Integridad del producto** | Implementado | `.war` oficial verificado por `sha256` (`b41ceb1e…6e716`); sin parches al binario |
 | **Transferencia de archivos** | **Deshabilitada** (2026-10-24) | `enable-drive=false` en las dos conexiones |
 | **Administración de cambios** | Implementado | Todo cambio pasa por spec aprobada, código versionado en git y verificación registrada |
-| **Grabación de sesiones** | **Implementado** (retención 7 días) | `recording-path=/var/lib/guacd/recordings` + timer `aries-grabacion-limpieza` |
+| **Grabación de sesiones** | **Implementado** (retención 7 días) | `recording-path=/var/www/aries-grabaciones/files` + timer `aries-grabacion-limpieza` |
 | **Envío a SIEM / alertas** | **Implementado** (correo + JSONL) | `/var/log/aries/eventos.jsonl`, timer `aries-eventos` cada 5 min; prueba de fuego con 5 fallos → alerta |
 | **Segregación de red / RDP acotado** | **No implementado** | Ver §4 y §5.5 |
 | **Cifrado de credenciales en reposo** | **No implementado** | Ver §4 |
@@ -52,7 +52,7 @@ El portal está publicado con **HTTPS de CA pública**, autenticación **usuario
 
 | # | Brecha | Riesgo | Mitigación propuesta | Coste |
 |---|---|---|---|---|
-| B1 | **Sin grabación de sesiones** | No se puede reconstruir qué se hizo dentro de una sesión | **Implementado (2026-10-24):** `recording-path`, `create-recording-path` y `recording-name=${HISTORY_UUID}` en las conexiones, con **timer diario que borra lo anterior a 7 días**. Reproducción desde la UI | **Bajo** |
+| B1 | **Sin grabación de sesiones** | No se puede reconstruir qué se hizo dentro de una sesión | **Implementado (2026-10-24):** `recording-path`, `create-recording-path` y `recording-name=${HISTORY_UUID}` en las conexiones, con **timer diario que borra lo anterior a 7 días**. Reproducción desde una **página propia** (`/grabaciones/`, Basic Auth) | **Bajo** |
 | B2 | **Sin alertas ni envío a SIEM** | Un acceso no autorizado o fuera de horario no se detecta a tiempo | **Implementado (2026-10-24):** colector cada 5 min → **JSONL** en `/var/log/aries/eventos.jsonl` + **correo** ante fuerza bruta (≥5 fallos/15 min por IP) y ante **acceso fuera de horario** (L-V 8-20, sáb 8-15, hora de Lima). Correo de prueba aceptado por el SMTP | **Bajo** |
 | B3 | **RDP alcanzable desde toda la LAN** | Cualquier equipo de la red puede atacar 3389 sin pasar por el portal. Medido: desde `192.168.18.41`, `192.168.18.75:3389` responde **abierto** | **Control compensatorio** (no hay VLAN: el switch no soporta 802.1Q y no hay invitados): reglas de "Escritorio remoto" acotadas a **`192.168.18.70`** en cada equipo, con `ops/windows/rdp-firewall.ps1`. Riesgo residual aceptado y documentado | **Bajo** |
 | B4 | **Credenciales de guest en claro en la base** | Quien lea la base obtiene las credenciales de RDP | Cifrado en reposo del volumen o disco; o rotación periódica de las cuentas de guest | **Medio** |
@@ -68,15 +68,13 @@ El portal está publicado con **HTTPS de CA pública**, autenticación **usuario
 
 **Hoy:** se registra el **metadato** de cada acceso — usuario, conexión, IP de origen, inicio, fin y duración — en `guacamole_connection_history`, y cada autenticación en `guacamole_user_history`. Consultable en la UI (**Ajustes → Sesiones activas** e **Historial de uso**) y exportable a CSV.
 
-**Grabación: implementada desde el 2026-10-24** con **retención de 7 días**. Se activa por conexión (`recording-path`, `create-recording-path`, `recording-name=${HISTORY_UUID}`). **No es video**: Guacamole graba el protocolo de dibujo, por lo que el consumo de disco y CPU es bajo (una sesión de 26 s ≈ 624 KB). Un timer diario (04:15) borra lo anterior a 7 días.
+**Grabación: implementada desde el 2026-10-24** con **retención de 7 días**. Se activa por conexión (`recording-path=/var/www/aries-grabaciones/files`, `create-recording-path`, `recording-name=${HISTORY_UUID}`, `recording-include-keys=true`). **No es video**: Guacamole graba el protocolo de dibujo, por lo que el consumo de disco y CPU es bajo (una sesión de 26 s ≈ 624 KB). Un timer diario (04:15) borra lo anterior a 7 días.
 
 **Limitación verificada (2026-10-24):** la **reproducción desde la propia UI no está disponible** en esta combinación. El enlace "Ver grabación" depende de un registro de actividad asociado a la sesión, y el módulo **JDBC de PostgreSQL de Guacamole 1.6.0 no almacena esos registros**: la API devuelve `logs: {}` para una sesión que sí generó archivo, y el `.jar` del módulo no conoce ninguna tabla de actividad. La grabación **se produce y se conserva**; lo que falta es el reproductor.
 
-**Alternativas para reproducir (a decidir):**
-1. **`guacenc`** (incluido en `guacamole-server`): convierte el `.guac` a **MP4**. Requiere recompilar `guacd` con `--with-guacenc` y las librerías de ffmpeg. Ventaja para auditoría: el video es portable y se puede entregar.
-2. **Página de reproducción propia** en `public/` con `guacamole-common-js` (ya presente en la webapp): reproduce el `.guac` en el navegador. Requiere exponer los archivos de grabación al servidor web, con control de acceso.
+**Reproducción: resuelta con una página propia** en `/grabaciones/`, servida por el Apache del backend con **Basic Auth** (usuario `humberto`, contraseña custodiada fuera del repo) y restringida por IP al proxy. Lista las grabaciones, las reproduce en el navegador y no depende de la UI de Guacamole. Verificado: **401** sin credenciales, **200** con ellas, **403** al pedir el backend desde una IP no autorizada.
 
-Hasta entonces, la evidencia de auditoría es el **metadato** (quién, cuándo, desde dónde, a qué máquina, cuánto) más los archivos `.guac` conservados.
+> **Nota para el auditor:** la reproducción **integrada en la interfaz de Guacamole** no existe con el backend JDBC de la versión desplegada (no almacena el registro de actividad que la UI usa para enlazar el archivo). La evidencia se obtiene por la página propia, que es parte de este sistema.
 
 ### 5.2 Logs, registros de acceso e intentos fallidos para SIEM
 
@@ -146,8 +144,8 @@ Internet ──443──► nginx (192.168.18.203) ──443──► server01 (
 | A.8.3 | Restricción de acceso a la información | **Parcial** | Unidad compartida deshabilitada; portapapeles activo |
 | A.8.5 | Autenticación segura | **Cumple** | MFA + límite de intentos + TLS |
 | A.8.12 | Prevención de fuga de datos | **Parcial** | Transferencia de archivos off; sin DLP ni control de portapapeles |
-| A.8.15 | Registro (logging) | **Parcial** | Historial en base de datos; sin grabación de sesión (B1) |
-| A.8.16 | Actividades de supervisión | **No cumple** | Sin alertas ni envío a SIEM (B2) |
+| A.8.15 | Registro (logging) | **Parcial** | Historial de accesos y grabación de sesiones (7 días) con reproducción por página propia; falta la política de retención documentada |
+| A.8.16 | Actividades de supervisión | **Parcial** | Colector cada 5 min con alertas por correo ante fuerza bruta y acceso fuera de horario, y JSONL listo para SIEM; falta el envío al colector remoto |
 | A.8.20 | Seguridad de redes | **Parcial** | TLS extremo a extremo; backend restringido por IP |
 | A.8.22 | Segregación de redes | **No cumple** | LAN plana; RDP alcanzable desde toda la red (B3) |
 | A.8.24 | Uso de criptografía | **Parcial** | TLS público e interno; sin cifrado en reposo (B4) |
@@ -182,7 +180,7 @@ powershell -c "Test-NetConnection 192.168.18.75 -Port 3389"   # TcpTestSucceeded
 ## 8. Limitaciones de este documento
 
 - Describe **un entorno**, no un SGSI. No cubre personas, procesos, proveedores ni continuidad.
-- Las brechas B2, B3 y B4 **están abiertas** a la fecha de este documento; su cierre tiene plan y coste estimado, no fecha comprometida.
+- La brecha **B3 (RDP alcanzable desde la LAN)** sigue abierta: el control está definido y scripteado (`ops/windows/rdp-firewall.ps1`), pendiente de ejecutar en cada equipo. **B4** (credenciales en claro) y **B5** (caducidad de contraseñas) también siguen abiertas. **B1 y B2 quedaron cerradas el 2026-10-24.**
 - "Cumple" significa que existe un control técnico y una evidencia reproducible; **no** que exista la política documentada que ISO 27001 exige en la mayoría de los controles.
 - El escaneo completo de la red **no se realizó**: requiere autorización explícita por tratarse de un barrido de la LAN.
 
@@ -205,7 +203,7 @@ Textos listos para decir o citar. Cada afirmación tiene su evidencia en §3 y �
 > "Cada acceso queda registrado con usuario, máquina, IP de origen, inicio, fin y duración, consultable y exportable a CSV. Los intentos fallidos y los bloqueos quedan en el registro del servidor de aplicaciones, con la IP real detrás del proxy."
 
 **Grabación de sesiones**
-> "Las sesiones se graban y se conservan siete días, con borrado automático. La reproducción integrada en la interfaz no está disponible con el backend actual —limitación verificada del módulo de base de datos de Guacamole 1.6.0—; la evidencia se entrega como video MP4 convertido desde la grabación original, y el metadato del acceso queda igualmente registrado."
+> "Las sesiones se graban y se conservan siete días, con borrado automático. Se ven en una página propia del sistema, protegida con credenciales separadas y restringida por IP, porque la reproducción integrada en la interfaz de Guacamole no existe con el backend actual —limitación verificada del módulo de base de datos de la versión desplegada—. El metadato del acceso queda igualmente registrado."
 
 **Monitoreo y alertas**
 > "Un colector revisa cada cinco minutos los accesos y los intentos fallidos. Genera un registro estructurado en formato JSONL y envía alerta por correo cuando detecta cinco o más fallos en quince minutos desde una IP, o un acceso fuera del horario laboral: lunes a viernes de 8:00 a 20:00 y sábados de 8:00 a 15:00, hora de Lima. El envío está probado con eventos reales."
@@ -222,7 +220,7 @@ Textos listos para decir o citar. Cada afirmación tiene su evidencia en §3 y �
 **Lo que no vamos a afirmar**
 - Que existe una política documentada de seguridad: los controles técnicos están, la documentación formal es trabajo pendiente.
 - Que la red está segmentada: no lo está, y hay un control compensatorio.
-- Que la reproducción de grabaciones está integrada en la interfaz: no lo está.
+- Que la reproducción de grabaciones está integrada en la interfaz de Guacamole: **no** lo está; se ve en una página propia.
 
 ## Relacionados
 

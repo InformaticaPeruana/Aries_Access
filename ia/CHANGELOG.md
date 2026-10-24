@@ -81,6 +81,24 @@ Files:
 * `ia/specs/infra/F-001/`, `ia/plans/F-001/`, `ia/decisions/DEC-0026-*`, `ia/CURRENT.md`, `ia/CHECKLIST.md`, `ia/GATES.md`, `ia/PROJECT.md`, `ia/ARCHITECTURE.md`, `ia/MEMORY.md`, `AGENTS.md`
 Spec: F-001
 
+## 2026-10-24 03:50
+
+Task: F-003 — grabación de sesiones, eventos con alertas y endurecimiento; insumos para la auditoría ISO 27001.
+Changed:
+* Grabación por conexión con retención de 7 días (`ops/90-grabacion.sh`, timer diario).
+* Colector `ops/alertas/eventos.py` + `ops/95-alertas.sh`: JSONL y alertas por correo ante fuerza bruta y acceso fuera de horario.
+* Página de grabaciones con Basic Auth (`ops/91-grabaciones.sh`) y enlace en el menú de Guacamole (`ops/branding/js/aries.js`).
+* Transferencia de archivos deshabilitada; script de firewall por equipo (`ops/windows/rdp-firewall.ps1`).
+* Documentos: estado de seguridad para la auditoría e inventario de la LAN.
+Validated:
+* PASS — harness 20 chequeos, 0 FAIL.
+* PASS — 5 fallos desde una IP → alerta + correo aceptado; IP correcta con `X-Forwarded-For` falsificado.
+* PASS — `/grabaciones/` 401 sin credenciales, 200 con ellas, 403 desde otra IP.
+* NOT_AVAILABLE — ejecución del firewall en cada equipo y reproducción en navegador.
+Files:
+* `ops/90-grabacion.sh`, `ops/91-grabaciones.sh`, `ops/95-alertas.sh`, `ops/alertas/eventos.py`, `ops/windows/rdp-firewall.ps1`, `ops/branding/js/aries.js`, `public/grabaciones/index.html`, `ia/specs/seguridad/F-003/`, `ia/plans/F-003/`, `ia/research/2026-10-24-*`
+Spec: F-003
+
 ## Relacionados
 
 - Estado actual: [`CURRENT.md`](./CURRENT.md) · Mapa: [`README.md`](./README.md)
