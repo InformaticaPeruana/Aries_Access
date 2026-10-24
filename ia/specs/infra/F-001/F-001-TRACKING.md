@@ -297,6 +297,8 @@ Los tres puntos de AC5 quedan cubiertos: no se entra con la cuenta de fábrica, 
 
 **Rotación de la contraseña de `humberto`** (2026-10-24, a pedido del usuario, por ser la generada ilegible): se hizo por `PUT /users/{u}/password` con la extensión de TOTP **apartada durante ~30 segundos** y repuesta al terminar; se verificó que la nueva autentica y la vieja ya no. La contraseña vive en `/root/humberto.pass` (`600`) y **no** en el repo. Este es el procedimiento a repetir si hay que rotarla: con TOTP activo, el login por API sin código no sirve.
 
+**Permiso de administración (2026-10-24):** se otorgó `ADMINISTER` a `humberto` (`guacamole_system_permission`) para que pueda ver la **auditoría** en la UI: sesiones activas e historial de uso. El valor correcto del permiso es **`ADMINISTER`**, no `ADMIN` (el primero falla contra el constraint de la tabla). `guacadmin` sigue existiendo como cuenta de rescate, con su contraseña en `/root/guacadmin.pass`.
+
 ## T08 — conexión RDP (2026-10-24) — `partial`
 
 Creada por API (con la extensión de TOTP apartada y repuesta, igual que en la rotación de contraseña).
