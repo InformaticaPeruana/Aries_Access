@@ -41,8 +41,8 @@ El portal está publicado con **HTTPS de CA pública**, autenticación **usuario
 | **Integridad del producto** | Implementado | `.war` oficial verificado por `sha256` (`b41ceb1e…6e716`); sin parches al binario |
 | **Transferencia de archivos** | **Deshabilitada** (2026-10-24) | `enable-drive=false` en las dos conexiones |
 | **Administración de cambios** | Implementado | Todo cambio pasa por spec aprobada, código versionado en git y verificación registrada |
-| **Grabación de sesiones** | **No implementado** | Ver §4 y §5.1 |
-| **Envío a SIEM / alertas** | **No implementado** | Ver §4 y §5.2 |
+| **Grabación de sesiones** | **Implementado** (retención 7 días) | `recording-path=/var/lib/guacd/recordings` + timer `aries-grabacion-limpieza` |
+| **Envío a SIEM / alertas** | **Implementado** (correo + JSONL) | `/var/log/aries/eventos.jsonl`, timer `aries-eventos` cada 5 min; prueba de fuego con 5 fallos → alerta |
 | **Segregación de red / RDP acotado** | **No implementado** | Ver §4 y §5.5 |
 | **Cifrado de credenciales en reposo** | **No implementado** | Ver §4 |
 
@@ -52,8 +52,8 @@ El portal está publicado con **HTTPS de CA pública**, autenticación **usuario
 
 | # | Brecha | Riesgo | Mitigación propuesta | Coste |
 |---|---|---|---|---|
-| B1 | **Sin grabación de sesiones** | No se puede reconstruir qué se hizo dentro de una sesión | `recording-path` + `create-recording-path` por conexión; reproducción desde la propia UI. Pesa poco (guarda el protocolo, no video) | **Bajo** (2 parámetros) |
-| B2 | **Sin alertas ni envío a SIEM** | Un acceso no autorizado o fuera de horario no se detecta a tiempo | Colector cada 5 min → JSONL en `/var/log/aries/` + correo ante N fallos o acceso fuera de horario; `rsyslog` ya presente para reenviar a un colector remoto | **Bajo** |
+| B1 | **Sin grabación de sesiones** | No se puede reconstruir qué se hizo dentro de una sesión | **Implementado (2026-10-24):** `recording-path`, `create-recording-path` y `recording-name=${HISTORY_UUID}` en las conexiones, con **timer diario que borra lo anterior a 7 días**. Reproducción desde la UI | **Bajo** |
+| B2 | **Sin alertas ni envío a SIEM** | Un acceso no autorizado o fuera de horario no se detecta a tiempo | **Implementado (2026-10-24):** colector cada 5 min → **JSONL** en `/var/log/aries/eventos.jsonl` + **correo** ante fuerza bruta (≥5 fallos/15 min por IP) y ante **acceso fuera de horario** (L-V 8-20, sáb 8-15, hora de Lima). Correo de prueba aceptado por el SMTP | **Bajo** |
 | B3 | **RDP alcanzable desde toda la LAN** | Cualquier equipo de la red puede atacar 3389 sin pasar por el portal. Medido: desde `192.168.18.41`, `192.168.18.75:3389` responde **abierto** | **Control compensatorio** (no hay VLAN: el switch no soporta 802.1Q y no hay invitados): reglas de "Escritorio remoto" acotadas a **`192.168.18.70`** en cada equipo, con `ops/windows/rdp-firewall.ps1`. Riesgo residual aceptado y documentado | **Bajo** |
 | B4 | **Credenciales de guest en claro en la base** | Quien lea la base obtiene las credenciales de RDP | Cifrado en reposo del volumen o disco; o rotación periódica de las cuentas de guest | **Medio** |
 | B5 | **Sin política de caducidad de contraseñas** | Credencial de larga vida | Rotación documentada y calendarizada | **Bajo** |
@@ -68,15 +68,25 @@ El portal está publicado con **HTTPS de CA pública**, autenticación **usuario
 
 **Hoy:** se registra el **metadato** de cada acceso — usuario, conexión, IP de origen, inicio, fin y duración — en `guacamole_connection_history`, y cada autenticación en `guacamole_user_history`. Consultable en la UI (**Ajustes → Sesiones activas** e **Historial de uso**) y exportable a CSV.
 
-**Grabación:** no está habilitada. Se habilita con dos parámetros en la conexión y se reproduce desde la UI, sin instalar nada. **No es video**: Guacamole graba el protocolo de dibujo, por lo que el consumo de disco y CPU es bajo. Requisito previo a habilitarla: definir **retención** y asumir que la grabación captura todo lo visible, incluidos datos tipeados.
+**Grabación: implementada desde el 2026-10-24** con **retención de 7 días**. Se activa por conexión (`recording-path`, `create-recording-path`, `recording-name=${HISTORY_UUID}`) y se reproduce desde la UI. **No es video**: Guacamole graba el protocolo de dibujo, por lo que el consumo de disco y CPU es bajo. Un timer diario (04:15) borra lo anterior a 7 días.
 
 ### 5.2 Logs, registros de acceso e intentos fallidos para SIEM
 
-**Fuentes disponibles:** historial en base de datos; access log de Apache y Tomcat con la IP real (el proxy agrega `X-Forwarded-For` y Tomcat lo interpreta); intentos fallidos y bloqueos visibles como `403`/`429`; journal de `guacd`.
+**Implementado desde el 2026-10-24.** Un colector (`aries-eventos`, cada 5 minutos) lee:
 
-**Falta:** un mecanismo que los convierta en **eventos** y los entregue. Propuesta mínima: colector propio cada 5 min que emita **JSONL** y dispare **correo** ante umbral de fallos o acceso fuera de horario; reenvío a un colector/SIEM por `rsyslog` (ya instalado) sin añadir agentes.
+- los accesos nuevos de `guacamole_connection_history` (usuario, conexión, IP real, duración);
+- las líneas nuevas del access log de Tomcat con estado `401/403/429` sobre `/api/tokens` (intentos fallidos y bloqueos, con la IP real detrás del proxy).
 
-**Decisión pendiente:** correo (SMTP) o `n8n` (ya presente en el host) para el envío; horario laboral y zona horaria.
+Produce **JSONL** en `/var/log/aries/eventos.jsonl` —formato listo para cualquier colector— y **envía correo** cuando:
+
+- una misma IP acumula **≥ 5 fallos en 15 minutos** (fuerza bruta);
+- hay un **acceso fuera de horario**: lunes a viernes 08:00–20:00 y sábados 08:00–15:00, hora de Lima (domingo cerrado).
+
+**Prueba de fuego ejecutada:** 5 intentos fallidos desde una IP de prueba → **1 alerta** y correo aceptado por el servidor SMTP. También se desactivó el *buffering* del access log de Tomcat para que los eventos no lleguen con retraso.
+
+**Hallazgo relevante:** el portal **ya recibe intentos desde Internet**. Entre los eventos recolectados hay fallos de autenticación desde `209.45.116.174`, `149.57.180.157` y `34.12.243.235`. No son accesos válidos: el límite de intentos y el TOTP los contienen, y desde ahora generan alerta.
+
+**Pendiente opcional:** reenvío a un colector/SIEM remoto por `rsyslog` (ya instalado). Hoy los eventos quedan en JSONL en el propio host.
 
 ### 5.3 Transferencia de archivos
 
