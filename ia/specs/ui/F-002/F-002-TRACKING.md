@@ -49,6 +49,8 @@ Ejecutado con `sudo bash ops/70-branding.sh` (las fuentes se suben junto al scri
 
 **Falta para cerrar T01:** que el usuario mire el login y confirme la paleta (AC2). El CSS está servido, pero "se ve bien" no lo puede afirmar un `grep`.
 
+**Corrección del primer intento (2026-10-24):** la primera versión pintaba `html, body` de navy, y eso dejó **toda la aplicación** con fondo oscuro y texto oscuro: la lista de conexiones quedó ilegible (lo reportó el usuario con captura). El navy se limita ahora a `.login-ui`; la app va sobre `gray-050` con texto `ink-900`, y `body.client` se deja en negro para las sesiones. Lección para el CSS del branding: **el fondo global no se toca; se pinta la vista, no el documento.**
+
 ## Notas de ejecución
 
 - **Nada ejecutado.** La spec está escrita y espera aprobación explícita.

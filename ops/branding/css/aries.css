@@ -6,6 +6,10 @@
  *
  * Selectores tomados del build desplegado (guacamole 1.6.0): .login-ui,
  * .login-dialog, .login-fields, .login-error, .button, .header.
+ *
+ * REGLA: el navy es SOLO del login. La aplicacion (lista de conexiones) va
+ * sobre gris frio con texto oscuro; pintar el body entero de navy deja el
+ * texto ilegible, que es exactamente lo que paso en el primer intento.
  */
 
 :root {
@@ -30,22 +34,43 @@
     --aries-mono: ui-monospace, "JetBrains Mono", "Cascadia Mono", monospace;
 }
 
-/* ---------- Login ------------------------------------------------------- */
+/* ---------- Base de la aplicacion --------------------------------------- */
 
 html,
 body {
-    background: var(--aries-navy-900) !important;
+    background: var(--aries-gray-050) !important;
+    color: var(--aries-ink-900) !important;
 }
+
+/* La sesion remota se pinta sobre negro; ahi no se toca nada. */
+body.client {
+    background: #000000 !important;
+}
+
+a {
+    color: var(--aries-navy-700);
+}
+
+a:hover {
+    color: var(--aries-amber-600);
+}
+
+h1, h2, h3, h4, h5, h6 {
+    color: var(--aries-ink-900);
+}
+
+/* ---------- Login (unico sitio con navy) -------------------------------- */
 
 .login-ui {
     min-height: 100vh;
     background:
         radial-gradient(1100px 520px at 50% -15%, var(--aries-navy-700), var(--aries-navy-900) 70%) !important;
+    color: var(--aries-gray-050) !important;
 }
 
 .login-ui .login-dialog {
     background: #ffffff !important;
-    color: var(--aries-ink-900);
+    color: var(--aries-ink-900) !important;
     border-top: 4px solid var(--aries-amber-500) !important;
     border-radius: .45em;
     box-shadow: 0 18px 44px rgba(0, 0, 0, .38);
@@ -67,7 +92,8 @@ body {
     border: 1px solid var(--aries-gray-200);
     border-radius: .25em;
     padding: .45em .6em;
-    color: var(--aries-ink-900);
+    color: var(--aries-ink-900) !important;
+    background: #ffffff !important;
 }
 
 .login-ui input:focus {
@@ -104,7 +130,7 @@ body {
     color: var(--aries-danger) !important;
 }
 
-/* ---------- Carcasa de la aplicacion ----------------------------------- */
+/* ---------- Cabecera ---------------------------------------------------- */
 
 .header {
     background: var(--aries-navy-900) !important;
@@ -113,11 +139,14 @@ body {
 
 .header a,
 .header h2,
-.header .connection-select-menu {
+.header h1,
+.header .connection-select-menu,
+.header .user-menu {
     color: var(--aries-gray-050) !important;
 }
 
-/* IPs, identificadores y cifras en monoespaciada. */
+/* ---------- Datos tecnicos --------------------------------------------- */
+
 .connection-id,
 .connection-identifier,
 .client-identifier {
