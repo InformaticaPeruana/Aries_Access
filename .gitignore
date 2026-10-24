@@ -20,3 +20,7 @@ dist/
 build/
 *.log
 tmp/
+
+# Artefactos de Python
+__pycache__/
+*.pyc
