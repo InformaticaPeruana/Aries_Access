@@ -29,8 +29,8 @@ Lista compacta. No es documentación extensa y no lleva justificaciones largas: 
 * [ ] Renovar el certificado interno de `server01` antes del **2029-01-25** (`/etc/ssl/guacamole/`, autofirmado, sin ACME) — owner: usuario
 * [ ] Cifrado en reposo de `guacamole_db`: las credenciales de los guests se guardan **en claro** en `guacamole_connection_parameter` (verificado en T08) - owner: usuario
 * [ ] Averiguar por qué `%a` del access log de Tomcat muestra la IP del proxy aunque el ban ya separa por la IP del cliente con `X-Forwarded-For` (observado en T07) - owner: agente
-* [ ] Panel de acceso propio en `public/` con tarjetas y deep links a cada conexión (feature: F-002)
-* [ ] Extensión de branding (`.jar` con `guac-manifest.json`) para el login y la cabecera (owner: usuario)
+* [ ] Panel propio en `public/` con tarjetas y deep links a cada conexión → **asumido por F-002 (T02)** (feature: F-002)
+* [ ] Extensión de branding (`.jar` con `guac-manifest.json`) → **asumido por F-002 (T01)** (feature: F-002)
 
 ## P3 — Ideas
 

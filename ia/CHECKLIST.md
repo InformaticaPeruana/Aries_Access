@@ -75,6 +75,13 @@ Registro de los datos que hay que conseguir de **fuentes externas** (cliente, pr
 - **Cerrado:** 2026-10-21 con la medición de T01. **Queda un dato para T08:** el usuario y la contraseña de la cuenta de Windows (`usuario`), que se cargan en Guacamole y no se versionan.
 - **Bloquea:** nada.
 
+### 10. Activos de marca
+- [ ] **Hexadecimales exactos** de la paleta: navy institucional, amber de acción y gris frío. Hoy F-002 usa una propuesta derivada de la descripción del usuario.
+- [ ] **Logo** en PNG (dos tamaños) para el icono de la aplicación y el favicon.
+- **Dueño:** usuario
+- **Condición de cierre:** los valores y el archivo están en `ops/branding/`.
+- **Bloquea:** AC1/AC2 de F-002 sólo en parte: sin hexadecimales se usa la propuesta; sin logo no se pone icono (no se inventa).
+
 ## Cierre de un ítem
 
 1. Marcar el checkbox.
